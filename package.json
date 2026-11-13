@@ -1,0 +1,22 @@
+{
+  "name": "discord",
+  "version": "1.0.0",
+  "description": "Discord bot ^^",
+  "license": "ISC",
+  "author": "Martin92yt",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "discord.js": "^14.28.1",
+    "dotenv": "^18.0.10",
+    "dragons-of-legends.js": "^0.1.5",
+    "gifuto.js": "^0.1.0",
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6"
+  }
+}
