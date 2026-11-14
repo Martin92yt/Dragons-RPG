@@ -1,4 +1,4 @@
-import type { EmojiKey } from "./emojis";
+import type { RegistryKey } from "./emojis";
 
 /**
  * Alias sémantiques : le code du bot parle de rôles (`gold`, `combat`, `bank`...),
@@ -54,6 +54,6 @@ export const ICONS = {
     success: "tick",
     friends: "friends",
     shuffle: "refresh",
-} as const satisfies Record<string, EmojiKey>;
+} as const satisfies Record<string, RegistryKey>;
 
 export type Icon = keyof typeof ICONS;
