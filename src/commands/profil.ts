@@ -29,11 +29,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     if (!player) throw new Error(`Impossible de charger ou créer le joueur ${targetUser.id}.`);
 
-    await player.titles.grant("novice_adventurer")
-    // await player.titles.equip("novice_adventurer")
     // Préparation des lignes optionnelles
     const skillPointsDisplay = player.attributes?.points 
-        ? `  (**${player.attributes.points}** <:skillpoints:1570840939377721355>)` 
+        ? `  (**${player.attributes.points}** <:skillpoints:1571115125694267402>)` 
         : "";
     const marriageDisplay = player.marriage?.getPartnerId() 
         ? `Marié(e) avec <@${player.marriage.getPartnerId().split("_").pop()}>` 
@@ -41,9 +39,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     // Construction sobre et aérée
     const profileText = [
-        `## <:user:1570841944500994249> __${player.titles.getDisplayName()}__`,
-        `<:level:1570840937859387465> **${player.level}**  •  **${player.experience.current}** <:experiencepoints:1570840935376355542>  •  **${player.health.current}** <:healthpoints:1570840936680792064>  •  <:ingot:1570840429296095495> **${player.gold}**  •  <:location:1570844436689068174> ${player.location ?? "Inconnu"}`,
-        `**Attributs :** <:broadsword:1570846340546826341> **${player.attributes?.strength ?? 0}**  •  <:warriorbootslv1:1570846338055409815> **${player.attributes?.agility ?? 0}**  •  <:light:1570846476597203045> **${player.attributes?.intelligence ?? 0}**  •  <:shield:1570846339217100950> **${player.attributes?.defense ?? 0}**` + skillPointsDisplay,
+        `## <:user:1571117804013355111> __${player.titles.getDisplayName()}__`,
+        `<:level:1571115075417145425> **${player.level}**  •  **${player.experience.current}** <:experiencepoints:1571115067359891557>  •  **${player.health.current}** <:healthpoints:1571115068752404550>  •  <:ingot:1571115239238537377> **${player.gold}**  •  <:location:1571118000898187394> ${player.location ?? "Inconnu"}`,
+        `**Attributs :** <:broadsword:1571115599344435333> **${player.attributes?.strength ?? 0}**  •  <:warriorbootslv1:1571115538720096336> **${player.attributes?.agility ?? 0}**  •  <:light:1571115221513142325> **${player.attributes?.intelligence ?? 0}**  •  <:shield:1571115546827821056> **${player.attributes?.defense ?? 0}**` + skillPointsDisplay,
         marriageDisplay,
     ].filter(Boolean).join("\n");
 

@@ -1,4 +1,4 @@
-import "./types/discord";
+import "./types/discord.d";
 import { config } from "dotenv";
 import { Client, Collection, Events } from "discord.js";
 import World from "dragons-of-legends.js";
@@ -7,7 +7,7 @@ import { deployCommands } from "./registers";
 import { readCommands } from "./core/commands";
 import { runGuard } from "./core/middleware";
 import { handleMessageXp } from "./core/xp";
-import { missingEmojis, withEmoji } from "./core/emojis";
+import { withEmoji } from "./core/emojis";
 import { panel, reply } from "./core/ui";
 import { resolveLocale, t } from "./i18n";
 
@@ -27,11 +27,6 @@ client.RPG = new World(CONFIG);
 
 client.once(Events.ClientReady, async (readyClient) => {
     console.log(`Connecté en tant que ${readyClient.user.tag}`);
-
-    const missing = missingEmojis();
-    if (missing.length > 0) {
-        console.warn(`[emojis] ${missing.length} emoji(s) sans ID, rendus vides : ${missing.join(", ")}`);
-    }
 
     // Les commandes sont chargées en mémoire AVANT d'être déployées : plus de fenêtre où une interaction arrive sans handler.
     for (const command of await readCommands()) {

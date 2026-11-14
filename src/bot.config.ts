@@ -9,7 +9,6 @@ export const BOT = {
         library: "https://github.com/Martin92yt/DragonsOfLegends.js",
     },
     /** Couleur d'accent des containers : blanc, pour rester dans une charte monochrome. */
-    accentColor: 0xffffff,
     jobs: {
         /** Durée minimale d'une session de job (le joueur est verrouillé pendant ce temps). */
         minDurationMs: 10_000,

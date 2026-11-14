@@ -15,14 +15,14 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const locale = resolveLocale(interaction.locale);
 
     const links = [
-        `${withEmoji("github", `[${t(locale, "about.link.bot")}](${BOT.links.bot})`)}`,
-        `${withEmoji("github", `[${t(locale, "about.link.library")}](${BOT.links.library})`)}`,
+        `${withEmoji("share", `[${t(locale, "about.link.bot")}](${BOT.links.bot})`)}`,
+        `${withEmoji("share", `[${t(locale, "about.link.library")}](${BOT.links.library})`)}`,
     ].join("\n");
 
     await interaction.reply(
         reply(
             panel(
-                `## ${withEmoji("dragon", t(locale, "about.title"))}`,
+                `## ${withEmoji("broadsword", t(locale, "about.title"))}`,
                 t(locale, "about.universe"),
                 t(locale, "about.engine"),
                 `**${t(locale, "about.links")}**\n${links}`,

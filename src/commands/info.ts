@@ -37,23 +37,23 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         withEmoji(emojiKey, `**${label}** : ${value}`);
 
     const stats = [
-        line("version", t(locale, "info.version"), `${BOT.version}`),
-        line("version", t(locale, "info.library"), libraryVersion()),
+        line("bug", t(locale, "info.version"), `${BOT.version}`),
+        line("tag", t(locale, "info.library"), libraryVersion()),
         line(
-            "info",
+            "wifi",
             t(locale, "info.health"),
             healthy ? t(locale, "info.health.ok") : t(locale, "info.health.degraded"),
         ),
-        line("ping", t(locale, "info.ping"), ping >= 0 ? `${ping} ms` : "—"),
-        line("uptime", t(locale, "info.uptime"), `<t:${startedAt}:R>`),
-        line("memory", t(locale, "info.memory"), `${memoryMb} MB`),
+        line("info", t(locale, "info.ping"), ping >= 0 ? `${ping} ms` : "—"),
+        line("clock", t(locale, "info.uptime"), `<t:${startedAt}:R>`),
+        line("microchip", t(locale, "info.memory"), `${memoryMb} MB`),
     ].join("\n");
 
     const world = [
-        line("server", t(locale, "info.servers"), String(client.guilds.cache.size)),
+        line("usergroup", t(locale, "info.servers"), String(client.guilds.cache.size)),
         line("user", t(locale, "info.players"), String(client.RPG.players.size)),
-        line("info", t(locale, "info.node"), process.version),
-        line("info", t(locale, "info.locale"), locale === "fr" ? "Français" : "English (US)"),
+        line("branch", t(locale, "info.node"), process.version),
+        line("earth", t(locale, "info.locale"), locale === "fr" ? "Français" : "English (US)"),
     ].join("\n");
 
     await interaction.reply(

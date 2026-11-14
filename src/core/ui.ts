@@ -11,7 +11,7 @@ import { BOT } from "../bot.config";
 
 /** Container monochrome : accent blanc, texte uniquement, aucune couleur vive. */
 export function panel(...blocks: Array<string | null | undefined | false>): ContainerBuilder {
-    const container = new ContainerBuilder().setAccentColor(BOT.accentColor);
+    const container = new ContainerBuilder();
     const filled = blocks.filter((b): b is string => typeof b === "string" && b.length > 0);
     filled.forEach((text, index) => {
         if (index > 0) {
