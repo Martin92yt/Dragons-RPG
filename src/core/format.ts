@@ -1,4 +1,5 @@
-import type { InventoryItemRecord, Item } from "dragons-of-legends.js";
+import type {  Item } from "dragons-of-legends.js";
+import type { InventoryItemRecord } from "dragons-of-legends.js/dist/inventory/inventory.interface.js";
 import { contentName, contentDescription } from "../i18n/content";
 import { t, type Locale } from "../i18n";
 

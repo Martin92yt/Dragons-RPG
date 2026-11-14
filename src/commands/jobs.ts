@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from "discord.js";
-import type { JobReward } from "dragons-of-legends.js";
+import type { JobReward } from "dragons-of-legends.js/dist/jobs/job.types.js";
 import { suggest } from "../core/autocomplete";
 import { withEmoji } from "../core/emojis";
 import { goldText, itemName, num } from "../core/format";
@@ -130,7 +130,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     }
 
     const jobId = interaction.options.getString("job", true);
-    const job = world.jobs.get(jobId);
+    const job = world.jobs.require(jobId);
     const jobLabel = jobName(locale, job.id, job.name);
 
     if (sub === "equip-tool") {

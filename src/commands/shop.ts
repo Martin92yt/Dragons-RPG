@@ -6,10 +6,9 @@ import { loadPlayer, persist, requirePlayer } from "../core/player";
 import { sendPaged } from "../core/paginate";
 import { panel, reply } from "../core/ui";
 import { contentName } from "../i18n/content";
+import { contentDescription } from "../i18n/content";
 import { describe, named, resolveLocale, t } from "../i18n";
 
-const shopOption = (o: Parameters<typeof describe>[0] & ReturnType<typeof named>) => o;
-void shopOption;
 
 export const data = describe(named(new SlashCommandBuilder(), "shop", "boutique"), "shop.desc")
     .addSubcommand((sub) =>
@@ -114,7 +113,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         });
         await sendPaged(interaction, locale, {
             title: withEmoji("shop", description),
-            intro: contentDescriptionOf(locale, shop),
+            intro: contentDescription(locale, "shop", shop.id, shop.description),
             lines,
             perPage: 6,
         });
@@ -164,15 +163,4 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             ),
         ),
     );
-}
-
-function contentDescriptionOf(locale: ReturnType<typeof resolveLocale>, shop: { id: string; description?: string }) {
-    return shop.description === undefined
-        ? undefined
-        : (locale === "fr" ? contentDescriptionFr(shop.id) : undefined) ?? shop.description;
-}
-
-import { contentDescription } from "../i18n/content";
-function contentDescriptionFr(id: string): string | undefined {
-    return contentDescription("fr", "shop", id, undefined);
 }

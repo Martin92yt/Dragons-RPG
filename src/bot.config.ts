@@ -7,6 +7,7 @@ export const BOT = {
     links: {
         bot: "https://github.com/Martin92yt/Dragons-RPG",
         library: "https://github.com/Martin92yt/DragonsOfLegends.js",
+        gifuto: "https://gifuto.vercel.app",
     },
     jobs: {
         /** Durée minimale d'une session de job (le joueur est verrouillé pendant ce temps). */

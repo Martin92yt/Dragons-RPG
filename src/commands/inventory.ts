@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from "discord.js";
-import type { EquipmentSlot, InventoryItemRecord } from "dragons-of-legends.js";
+import type { EquipmentSlot } from "dragons-of-legends.js";
+import type { InventoryItemRecord } from "dragons-of-legends.js/dist/inventory/inventory.interface.js";
 import { suggest } from "../core/autocomplete";
 import { confirm } from "../core/confirm";
 import { withEmoji } from "../core/emojis";
