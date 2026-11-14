@@ -8,7 +8,6 @@ export const BOT = {
         bot: "https://github.com/Martin92yt/Dragons-RPG",
         library: "https://github.com/Martin92yt/DragonsOfLegends.js",
     },
-    /** Couleur d'accent des containers : blanc, pour rester dans une charte monochrome. */
     jobs: {
         /** Durée minimale d'une session de job (le joueur est verrouillé pendant ce temps). */
         minDurationMs: 10_000,

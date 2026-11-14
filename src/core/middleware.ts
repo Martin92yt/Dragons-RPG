@@ -27,7 +27,10 @@ function describeBlock(locale: Locale, result: Extract<GuardResult, { ok: false 
  *
  * @returns `true` si la commande peut s'exécuter, `false` si l'interaction a déjà reçu une réponse de refus.
  */
-export async function runGuard(interaction: ChatInputCommandInteraction): Promise<boolean> {
+export async function runGuard(
+    interaction: ChatInputCommandInteraction,
+    command: BotCommand,
+): Promise<boolean> {
     const locale = resolveLocale(interaction.locale);
 
     if (!interaction.inGuild() || !interaction.guildId) {
@@ -42,6 +45,9 @@ export async function runGuard(interaction: ChatInputCommandInteraction): Promis
         playerIdOf(interaction.guildId, interaction.user.id),
     );
     if (result.ok) return true;
+
+    // Exemption ciblée : attaquer ou fuir reste possible en combat, puisque c'est la seule façon d'en sortir.
+    if (command.allowDuring?.(interaction).includes(result.state)) return true;
 
     const view = STATE_VIEW[result.state];
     await interaction.reply(
