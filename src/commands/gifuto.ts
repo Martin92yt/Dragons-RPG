@@ -103,8 +103,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const gifUrl = transformTenorUrl(gif.url);
 
         const actionText = target
-            ? `<:friends:1570819643453472858> ${interaction.user} interagit avec ${target}.`
-            : `<:friends:1570819643453472858> ${interaction.user} a demandé un GIF.`;
+            ? `<:friends:1571117775672578119> ${interaction.user} interagit avec ${target}.`
+            : `<:friends:1571117775672578119> ${interaction.user} a demandé un GIF.`;
 
         const components = [
             new ContainerBuilder()
@@ -117,7 +117,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                     ),
                 )
                 .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent("-# *From [Gifuto <:share:1570821817537527828>](https://gifuto.vercel.app)*"),
+                    new TextDisplayBuilder().setContent("-# *From [Gifuto <:share02:1571118009265684650>](https://gifuto.vercel.app)*"),
                 ),
         ];
 
