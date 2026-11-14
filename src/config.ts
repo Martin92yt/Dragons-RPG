@@ -1,4 +1,6 @@
-export default {
+import type { WorldOptions } from "dragons-of-legends.js";
+
+const config: WorldOptions = {
     bestiary: {
         enabled: true,
     },
@@ -15,6 +17,7 @@ export default {
     premadeJobs: true,
     premadeMap: true,
     premadeTitles: true,
-    regen: { cooldown: "10s", enabled: true, rate: 0 },
+    regen: { cooldown: 10, enabled: true, rate: 0 },
     starterGold: 500,
 }
+export default config;
