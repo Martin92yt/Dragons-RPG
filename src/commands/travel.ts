@@ -2,7 +2,7 @@ import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputComman
 import { LocationFlags } from "dragons-of-legends.js";
 import { suggest } from "../core/autocomplete";
 import { withEmoji } from "../core/emojis";
-import { locationName, num, tierLabel } from "../core/format";
+import { locationName, tierLabel } from "../core/format";
 import { loadPlayer, persist, requirePlayer } from "../core/player";
 import { sendPaged } from "../core/paginate";
 import { edit, panel, reply } from "../core/ui";
@@ -165,7 +165,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             }
             if (!result.arrived) blocks[0] = `## ${withEmoji("travel", t(locale, "travel.interrupted", { place }))}`;
             await interaction.editReply(edit(panel(...blocks)) as never);
-            void num;
         }
     }
 }

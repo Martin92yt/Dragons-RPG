@@ -2,7 +2,7 @@ import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputComman
 import { suggest } from "../core/autocomplete";
 import { withEmoji } from "../core/emojis";
 import { captureEvents, eventsNamed } from "../core/events";
-import { goldText, itemName, rarityLabel } from "../core/format";
+import { itemName, rarityLabel } from "../core/format";
 import { persist, requirePlayer, type Player } from "../core/player";
 import { sendPaged } from "../core/paginate";
 import { describeRewards } from "../core/rewards";
@@ -131,4 +131,3 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     );
 }
 
-void goldText;

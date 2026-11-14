@@ -1,11 +1,11 @@
-import type { Client } from "discord.js";
+import { MessageFlags, type Client } from "discord.js";
 import type World from "dragons-of-legends.js";
 import type { GameEventName, GameEvents } from "dragons-of-legends.js";
 import { contentName } from "../i18n/content";
 import { emoji } from "./emojis";
 import { userIdOf } from "./player";
 import { panel, reply } from "./ui";
-import { resolveLocale, t, type Locale } from "../i18n";
+import { t, type Locale } from "../i18n";
 
 // ── Capture d'événements ─────────────────────────────────────────────────────
 
@@ -67,7 +67,8 @@ async function notify(client: Client, playerId: string, text: (locale: Locale) =
 
     await channel
         .send({
-            ...reply(panel(text(known.locale))),
+            components: reply(panel(text(known.locale))).components,
+            flags: MessageFlags.IsComponentsV2,
             allowedMentions: { users: [userIdOf(playerId)] },
         })
         .catch(() => undefined);

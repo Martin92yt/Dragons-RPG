@@ -13,7 +13,7 @@ import { attributeLabel, goldText, locationName, num } from "../core/format";
 import { requireTargetPlayer, userIdOf } from "../core/player";
 import { bar, clip } from "../core/ui";
 import { contentName } from "../i18n/content";
-import { describe, formatDuration, named, resolveLocale, t } from "../i18n";
+import { describe, formatDuration, formatIn, named, resolveLocale, t, type MessageKey } from "../i18n";
 
 export const data = describe(named(new SlashCommandBuilder(), "profile", "profil"), "profile.desc").addUserOption(
     (o) => describe(named(o, "user", "joueur"), "opt.user"),
@@ -36,6 +36,18 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const place = world.location.get(player.location);
 
     const attributes = player.attributes;
+    const kills = player.bestiary.list().reduce((sum, entry) => sum + entry.kills, 0);
+    const items = (await player.inventory.getItems()).reduce((sum, record) => sum + record.quantity, 0);
+    const vaultSlots = `${await player.itemBank.getUsedSlots()}/${player.itemBank.getCapacity()}`;
+    const status = player.life.isDead
+        ? player.life.isPermanentlyDead
+            ? t(locale, "profile.statusDeadPermanent")
+            : t(locale, "profile.statusDead", { time: formatIn(locale, player.life.getRemainingMs()) })
+        : player.inCombat
+          ? t(locale, "profile.statusCombat")
+          : player.isTravelling
+            ? t(locale, "profile.statusTravel")
+            : t(locale, "profile.statusIdle");
     const points = attributes.points > 0 ? ` (**${attributes.points}** ${t(locale, "profile.points")})` : "";
 
     const bonuses = [
@@ -53,10 +65,11 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         .map((j) => `${contentName(locale, "job", j.jobId, j.name)} ${t(locale, "common.levelShort")} ${j.level}`);
 
     const lines = [
-        `## ${withEmoji("user", escapeMarkdown(player.name))}`,
+        `## ${withEmoji("character", escapeMarkdown(player.name))}`,
         `*${title ? contentName(locale, "title", title.id, title.name) : t(locale, "profile.noTitle")}*`,
         "",
         `**${t(locale, "profile.class")}** : ${playerClass ? contentName(locale, "class", playerClass.id, playerClass.name) : player.classId}`,
+        `**${t(locale, "profile.status")}** : ${status}`,
         withEmoji("level", `**${t(locale, "profile.level")}** : ${player.level}`),
         withEmoji(
             "experience",
@@ -72,7 +85,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             : null,
         withEmoji(
             "location",
-            `**${t(locale, "profile.location")}** : ${locationName(locale, player.location)}${place ? ` (${t(locale, `location.${place.locationType}`)})` : ""}`,
+            `**${t(locale, "profile.location")}** : ${locationName(locale, player.location)}${place ? ` (${t(locale, `location.${place.locationType}` as MessageKey)})` : ""}`,
         ),
         "",
         `**${t(locale, "profile.attributes")}** : ${attributeLabel(locale, "strength")} **${attributes.strength}** • ${attributeLabel(locale, "agility")} **${attributes.agility}** • ${attributeLabel(locale, "intelligence")} **${attributes.intelligence}** • ${attributeLabel(locale, "defense")} **${attributes.defense}**${points}`,
@@ -85,6 +98,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                   t(locale, "profile.marriage", { partner: `<@${userIdOf(player.marriage.getPartnerId())}>` }),
               )
             : null,
+        `**${t(locale, "profile.kills")}** : ${num(locale, kills)} • **${t(locale, "profile.items")}** : ${num(locale, items)} • **${t(locale, "profile.vault")}** : ${vaultSlots}`,
         `**${t(locale, "profile.bestiary")}** : ${progress.discovered}/${progress.total} • **${t(locale, "profile.achievements")}** : ${unlocked}/${totalAchievements}`,
     ].filter((line): line is string => line !== null);
 

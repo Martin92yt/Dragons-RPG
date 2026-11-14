@@ -1,143 +1,150 @@
 import {
-    TextDisplayBuilder,
-    MediaGalleryBuilder,
-    MediaGalleryItemBuilder,
+    ApplicationIntegrationType,
     ButtonBuilder,
     ButtonStyle,
-    SectionBuilder,
-    ContainerBuilder,
-    SlashCommandBuilder,
-    MessageFlags,
-    ApplicationIntegrationType,
+    ComponentType,
     InteractionContextType,
-    type ChatInputCommandInteraction,
+    MediaGalleryBuilder,
+    MediaGalleryItemBuilder,
+    SlashCommandBuilder,
+    TextDisplayBuilder,
     type AutocompleteInteraction,
+    type ChatInputCommandInteraction,
 } from "discord.js";
-import { Gifuto } from "gifuto.js";
+import { Gifuto, type Gif } from "gifuto.js";
+import { BOT } from "../bot.config";
+import { emoji, withEmoji } from "../core/emojis";
+import { num } from "../core/format";
+import { edit, panel, reply, withButtons } from "../core/ui";
+import { describe, localizations, named, resolveLocale, t, type Locale } from "../i18n";
 
 const gifuto = new Gifuto({ apiKey: process.env.Gifuto! });
 
-export const data = new SlashCommandBuilder()
-    .setName("anime")
-    .setDescription("Commande d'anime aléatoire")
-    // Permet l'installation sur un serveur (Guild) et/ou sur le profil utilisateur (User)
-    .setIntegrationTypes(
-        ApplicationIntegrationType.GuildInstall,
-        ApplicationIntegrationType.UserInstall
-    )
-    // Définit où la commande peut être exécutée (Serveurs, Messages privés, etc.)
-    .setContexts(
-        InteractionContextType.Guild,
-        InteractionContextType.BotDM,
-        InteractionContextType.PrivateChannel
-    )
-    .addStringOption((o) =>
-        o.setName("tag")
-            .setDescription("Tag, anime ou personnage optionnel")
+/** Fonctionne partout (serveur, messages privés, installation utilisateur) et sans personnage. */
+export const bypassGuard = true;
+
+export const data = describe(named(new SlashCommandBuilder(), "anime"), "anime.desc")
+    .setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)
+    .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel)
+    .addStringOption((o) => {
+        const loc = localizations("anime.opt.tag");
+        return o
+            .setName("tag")
+            .setDescription(loc["en-US"])
+            .setDescriptionLocalizations({ fr: loc.fr })
             .setRequired(false)
-            .setAutocomplete(true),
-    )
-    .addUserOption((o) =>
-        o.setName("member")
-            .setDescription("Membre ciblé (optionnel)")
-            .setRequired(false),
-    );
+            .setAutocomplete(true);
+    })
+    .addUserOption((o) => {
+        const loc = localizations("anime.opt.member");
+        return o
+            .setName("member")
+            .setNameLocalizations({ fr: "membre" })
+            .setDescription(loc["en-US"])
+            .setDescriptionLocalizations({ fr: loc.fr })
+            .setRequired(false);
+    });
 
-/**
- * Gère les suggestions d'autocomplétion pour l'option "tag"
- */
-export async function autocomplete(interaction: AutocompleteInteraction) {
-    const focusedValue = interaction.options.getFocused().toLowerCase();
-
+export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+    const locale = resolveLocale(interaction.locale);
+    const typed = interaction.options.getFocused().toLowerCase();
     try {
         const tags = await gifuto.getTags();
-        
-        if (!Array.isArray(tags)) {
-            await interaction.respond([]);
-            return;
-        }
-
-        const filteredTags = tags.filter((item: any) => {
-            const label = item?.label?.toLowerCase() || "";
-            const slug = item?.slug?.toLowerCase() || "";
-            return label.includes(focusedValue) || slug.includes(focusedValue);
-        });
-
-        const choices = filteredTags.slice(0, 25).map((item: any) => ({
-            name: `${item.label} (${item.count} GIFs)`,
-            value: item.slug,
-        }));
-
+        const choices = tags
+            .filter((tag) => tag.label.toLowerCase().includes(typed) || tag.slug.toLowerCase().includes(typed))
+            .slice(0, 25)
+            .map((tag) => ({
+                name: t(locale, "anime.tagCount", { label: tag.label, count: tag.count }).slice(0, 100),
+                value: tag.slug,
+            }));
         await interaction.respond(choices);
     } catch (error) {
-        console.error("Erreur lors de l'autocomplétion :", error);
-        await interaction.respond([]);
+        console.error("[anime] autocomplete", error);
+        await interaction.respond([]).catch(() => undefined);
     }
 }
 
-/**
- * Transforme une URL Tenor standard en URL directe /c.tenor.com
- */
+/** Transforme une URL Tenor standard en URL directe c.tenor.com. */
 function transformTenorUrl(url: string): string {
     const match = url.match(/https?:\/\/(?:media\d*|c)\.tenor\.com\/(?:m\/)?([a-zA-Z0-9_-]+)\/.*/i);
-    if (match && match[1]) {
-        return `https://c.tenor.com/${match[1]}/tenor.gif`;
-    }
-    return url;
+    return match?.[1] ? `https://c.tenor.com/${match[1]}/tenor.gif` : url;
 }
 
-export async function execute(interaction: ChatInputCommandInteraction) {
+function infoLines(locale: Locale, gif: Gif): string {
+    const tags = [gif.tags.primary, ...gif.tags.secondary].filter((tag): tag is string => Boolean(tag));
+    const lines = [
+        gif.anime ? t(locale, "anime.anime", { anime: gif.anime }) : null,
+        gif.characters.length > 0 ? t(locale, "anime.characters", { characters: gif.characters.join(", ") }) : null,
+        gif.episode ? t(locale, "anime.episode", { episode: gif.episode }) : null,
+        tags.length > 0 ? t(locale, "anime.tags", { tags: tags.map((tag) => `\`${tag}\``).join(" ") }) : null,
+    ].filter((line): line is string => line !== null);
+    return lines.join("\n");
+}
+
+function view(locale: Locale, gif: Gif, header: string, disabled: boolean, buttonId: string) {
+    const container = panel(header, infoLines(locale, gif));
+    container.addMediaGalleryComponents(
+        new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(transformTenorUrl(gif.url))),
+    );
+    container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `-# ${t(locale, "anime.hits", { hits: num(locale, gif.hits) })} • ${emoji("share02")} ${t(locale, "anime.credit", { url: BOT.links.gifuto })}`,
+        ),
+    );
+    return withButtons(
+        container,
+        new ButtonBuilder().setCustomId(buttonId).setLabel(t(locale, "anime.another")).setStyle(ButtonStyle.Secondary).setDisabled(disabled),
+    );
+}
+
+export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    const locale = resolveLocale(interaction.locale);
     const tag = interaction.options.getString("tag");
     const target = interaction.options.getUser("member");
+    const buttonId = `anime:again:${interaction.id}`;
 
+    const header = withEmoji(
+        "friends",
+        target
+            ? t(locale, "anime.with", { user: `${interaction.user}`, target: `${target}` })
+            : t(locale, "anime.self", { user: `${interaction.user}` }),
+    );
+
+    const fetchGif = () => gifuto.getRandomGif({ noRepeat: interaction.channelId ?? interaction.user.id, ...(tag ? { tag } : {}) });
+
+    let gif: Gif;
     try {
-        const fetchOptions: any = {
-            noRepeat: interaction.channelId,
-        };
-
-        if (tag) {
-            fetchOptions.tag = tag;
-        }
-
-        const gif = await gifuto.getRandomGif(fetchOptions);
-        const gifUrl = transformTenorUrl(gif.url);
-
-        const actionText = target
-            ? `<:friends:1571117775672578119> ${interaction.user} interagit avec ${target}.`
-            : `<:friends:1571117775672578119> ${interaction.user} a demandé un GIF.`;
-
-        const components = [
-            new ContainerBuilder()
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent(actionText),
-                )
-                .addMediaGalleryComponents(
-                    new MediaGalleryBuilder().addItems(
-                        new MediaGalleryItemBuilder().setURL(gifUrl),
-                    ),
-                )
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent("-# *From [Gifuto <:share02:1571118009265684650>](https://gifuto.vercel.app)*"),
-                ),
-        ];
-
-        await interaction.reply({
-            flags: [MessageFlags.IsComponentsV2],
-            components: components,
-        });
-    } catch (e) {
-        console.log(e);
-        const components = [
-            new ContainerBuilder().addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(
-                    "<:exclamation:1570820851014705264> No GIFs available right now.",
-                ),
-            ),
-        ];
-
-        await interaction.reply({
-            flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
-            components: components,
-        });
+        gif = await fetchGif();
+    } catch (error) {
+        console.error("[anime]", error);
+        await interaction.reply(
+            reply(panel(withEmoji("error", t(locale, tag ? "anime.noResult" : "anime.empty"))), { ephemeral: true }),
+        );
+        return;
     }
+
+    await interaction.reply({
+        ...reply(view(locale, gif, header, false, buttonId)),
+        allowedMentions: { users: target ? [target.id] : [] },
+    });
+    const message = await interaction.fetchReply();
+
+    // Bouton « Un autre » : réservé à l'auteur, actif 2 minutes.
+    const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 120_000 });
+    collector.on("collect", async (button) => {
+        if (button.user.id !== interaction.user.id) {
+            await button.reply(reply(panel(withEmoji("error", t(resolveLocale(button.locale), "anime.notYours"))), { ephemeral: true })).catch(() => undefined);
+            return;
+        }
+        try {
+            gif = await fetchGif();
+            await button.update(edit(view(locale, gif, header, false, buttonId)));
+        } catch (error) {
+            console.error("[anime] reroll", error);
+            await button.reply(reply(panel(withEmoji("error", t(locale, "anime.error"))), { ephemeral: true })).catch(() => undefined);
+        }
+    });
+    collector.on("end", () => {
+        interaction.editReply(edit(view(locale, gif, header, true, buttonId)) as never).catch(() => undefined);
+    });
 }

@@ -6,6 +6,9 @@ import CONFIG from "./config";
 import { deployCommands } from "./registers";
 import { readCommands } from "./core/commands";
 import { runGuard } from "./core/middleware";
+import { describeError } from "./core/errors";
+import { registerEventHooks, rememberPresence } from "./core/events";
+import { playerIdOf } from "./core/guard";
 import { handleMessageXp } from "./core/xp";
 import { withEmoji } from "./core/emojis";
 import { panel, reply } from "./core/ui";
@@ -32,8 +35,29 @@ client.once(Events.ClientReady, async (readyClient) => {
     for (const command of await readCommands()) {
         client.commands.set(command.data.name, command);
     }
+    registerEventHooks(client);
     await deployCommands(CLIENT_ID, TOKEN, process.env.GuildID);
 });
+
+// La librairie ne sauvegarde pas chaque modification : sauvegarde périodique et à l'arrêt.
+const autosave = setInterval(() => {
+    client.RPG.players.saveAll().catch((error: unknown) => console.error("[autosave]", error));
+}, 60_000);
+autosave.unref();
+
+async function shutdown(signal: string): Promise<void> {
+    console.log(`${signal} reçu, sauvegarde des joueurs...`);
+    clearInterval(autosave);
+    try {
+        await client.RPG.quick();
+    } catch (error) {
+        console.error("[shutdown]", error);
+    }
+    await client.destroy();
+    process.exit(0);
+}
+process.once("SIGINT", () => void shutdown("SIGINT"));
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
 client.on(Events.MessageCreate, (message) => {
     handleMessageXp(message).catch((error) => console.error("[xp]", error));
@@ -49,12 +73,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         try {
             // Guard exécuté avant chaque commande, sauf exemption explicite (/about, /info).
-            if (!command.bypassGuard && !(await runGuard(interaction))) return;
+            if (!command.bypassGuard && !(await runGuard(interaction, command))) return;
+            if (interaction.inGuild() && interaction.channelId) {
+                rememberPresence(
+                    playerIdOf(interaction.guildId, interaction.user.id),
+                    interaction.channelId,
+                    resolveLocale(interaction.locale),
+                );
+            }
             await command.execute(interaction);
         } catch (error) {
-            console.error(error);
             const locale = resolveLocale(interaction.locale);
-            const message = reply(panel(withEmoji("error", t(locale, "error.generic"))), { ephemeral: true });
+            // Erreur connue de la librairie : message traduit. Sinon bug : log + message générique.
+            const known = describeError(locale, error);
+            if (!known) console.error(error);
+            const message = reply(panel(withEmoji("error", known ?? t(locale, "error.generic"))), { ephemeral: true });
 
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(message).catch(() => undefined);

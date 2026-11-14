@@ -2,8 +2,8 @@ import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputComman
 import type { AchievementDefinition, AchievementReward } from "dragons-of-legends.js";
 import { suggest } from "../core/autocomplete";
 import { emoji, withEmoji } from "../core/emojis";
-import { fullDate, goldText, itemName, num } from "../core/format";
-import { loadPlayer, persist, requirePlayer } from "../core/player";
+import { fullDate, itemName, num } from "../core/format";
+import { persist, requirePlayer } from "../core/player";
 import { sendPaged } from "../core/paginate";
 import { bar, panel, reply } from "../core/ui";
 import { contentDescription, contentName } from "../i18n/content";
@@ -162,4 +162,3 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     });
 }
 
-void goldText;
