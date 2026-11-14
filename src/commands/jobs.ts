@@ -1,76 +1,68 @@
-import {
-    SlashCommandBuilder,
-    type ChatInputCommandInteraction,
-    TextDisplayBuilder,
-    ThumbnailBuilder,
-    SectionBuilder,
-    ContainerBuilder,
-    MessageFlags,
-} from "discord.js";
-import { PlayerClass } from 'dragons-of-legends.js';
+import { SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
+import { PlayerClass } from "dragons-of-legends.js";
+import { BOT } from "../bot.config";
+import { withEmoji } from "../core/emojis";
+import { playerIdOf } from "../core/guard";
+import { runJobSession } from "../core/job-sessions";
+import { panel, reply } from "../core/ui";
+import { formatDuration, localizations, resolveLocale, t } from "../i18n";
 
 export const data = new SlashCommandBuilder()
     .setName("jobs")
-    .setDescription("Système de métiers")
-    .addSubcommand((subcommand) =>
-        subcommand
+    .setDescription("Jobs")
+    .setDescriptionLocalizations({ fr: "Système de métiers", "en-US": "Jobs system" })
+    .addSubcommand((sub) =>
+        sub
             .setName("fish")
-            .setDescription("Partir à la pêche")
-            .addStringOption((option) =>
-                option
-                    .setName("type")
-                    .setDescription("Type de session de pêche")
-                    .setRequired(true)
-                    .addChoices(
-                        { name: "Long", value: "fish" },
-                        { name: "Short", value: "fish" }
-                    )
-            )
+            .setDescription("Go fishing")
+            .setDescriptionLocalizations({ fr: "Partir à la pêche", "en-US": "Go fishing" }),
     );
 
-export async function execute(interaction: ChatInputCommandInteraction) {
-    const targetUser = interaction.user;
-    const type = interaction.options.getString("type", true); // "long" ou "short"
+export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    const locale = resolveLocale(interaction.locale);
+    const user = interaction.user;
+    const playerId = playerIdOf(interaction.guildId!, user.id);
 
-    // Récupération / Création du joueur
     const player = await interaction.client.RPG.players.ensure({
-        id: `${interaction.guildId}_${targetUser.id}`,
-        name: targetUser.displayName,
+        id: playerId,
+        name: user.displayName,
         playerClass: PlayerClass.Explorer,
     });
 
-    // Exécution de l'action de pêche avec le type sélectionné
-    const fishing = await player.jobs.perform("fishing", type);
+    if (!player) throw new Error(`Impossible de charger ou créer le joueur ${playerId}.`);
 
-    // Formatage du butin récolté
-    const lootDisplay = fishing?.loot && fishing.loot.length > 0
-        ? fishing.loot.map(({ item, quantity }) => `• **${quantity}x** ${item.name}`).join("\n")
-        : "Rien attrapé cette fois-ci...";
-
-    const fishingText = [
-        `## <:fishhook:1570852266292936834> __Résultat de Pêche (${type.toUpperCase()})__`,
-        `* ${targetUser.displayName} a terminé sa session de pêche.`,
-        ``,
-        `**Butin récolté :**`,
-        lootDisplay
-    ].join("\n");
-
-    const components = [
-        new ContainerBuilder()
-            .addSectionComponents(
-                new SectionBuilder()
-                    .setThumbnailAccessory(
-                        new ThumbnailBuilder()
-                            .setURL(targetUser.displayAvatarURL())
-                    )
-                    .addTextDisplayComponents(
-                        new TextDisplayBuilder().setContent(fishingText),
-                    ),
+    // On répond tout de suite : la session dure au minimum `BOT.jobs.minDurationMs`.
+    await interaction.reply(
+        reply(
+            panel(
+                withEmoji(
+                    "fishing",
+                    t(locale, "jobs.started", { duration: formatDuration(BOT.jobs.minDurationMs) }),
+                ),
             ),
-    ];
+        ),
+    );
 
-    await interaction.reply({
-        flags: [MessageFlags.IsComponentsV2],
-        components: components,
-    });
+    const result = await runJobSession(playerId, "fishing", () => player.jobs.perform("fishing", "fish"));
+
+    if (result === null) {
+        await interaction.editReply(
+            reply(panel(withEmoji("jobs", t(locale, "jobs.alreadyBusy")))) as never,
+        );
+        return;
+    }
+
+    const loot =
+        result.loot.length > 0
+            ? result.loot.map(({ item, quantity }) => `• **${quantity}x** ${item.name}`).join("\n")
+            : t(locale, "jobs.nothing");
+
+    await interaction.editReply(
+        reply(
+            panel(
+                `## ${withEmoji("fishing", t(locale, "jobs.finished"))}`,
+                `**${t(locale, "jobs.loot")}**\n${loot}`,
+            ),
+        ) as never,
+    );
 }

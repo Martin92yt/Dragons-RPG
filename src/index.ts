@@ -1,111 +1,82 @@
-import CONFIG from './config';
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import "./types/discord";
 import { config } from "dotenv";
-import { Client, Collection, Events, MessageFlags } from "discord.js";
+import { Client, Collection, Events } from "discord.js";
 import World from "dragons-of-legends.js";
-import { deployCommands } from "./registers.js";
+import CONFIG from "./config";
+import { deployCommands } from "./registers";
+import { readCommands } from "./core/commands";
+import { runGuard } from "./core/middleware";
+import { handleMessageXp } from "./core/xp";
+import { missingEmojis, withEmoji } from "./core/emojis";
+import { panel, reply } from "./core/ui";
+import { resolveLocale, t } from "./i18n";
 
 config();
 
 const CLIENT_ID = process.env.ClientID;
+const TOKEN = process.env.Discord;
 
-if (!CLIENT_ID) {
-    console.error(
-        "Erreur : La variable d'environnement CLIENT_ID est manquante dans le fichier .env",
-    );
+if (!CLIENT_ID || !TOKEN) {
+    console.error("Erreur : les variables d'environnement ClientID et Discord sont requises dans le fichier .env");
     process.exit(1);
 }
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const client = new Client({ intents: 53608447 });
 client.commands = new Collection();
 client.RPG = new World(CONFIG);
 
-// Fonction pour charger dynamiquement les commandes en mémoire
-async function loadCommands() {
-    const commandsPath = path.join(__dirname, "commands");
-
-    if (!fs.existsSync(commandsPath)) {
-        fs.mkdirSync(commandsPath);
-    }
-
-    const commandFiles = fs
-        .readdirSync(commandsPath)
-        .filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
-
-    for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const commandModule = await import(pathToFileURL(filePath).href);
-        const command = commandModule.default || commandModule;
-
-        if ("data" in command && "execute" in command) {
-            client.commands.set(command.data.name, command);
-        } else {
-            console.warn(
-                `[AVERTISSEMENT] La commande dans ${filePath} manque de la propriété "data" ou "execute".`,
-            );
-        }
-    }
-}
-
-// Événement de démarrage du bot
 client.once(Events.ClientReady, async (readyClient) => {
-    console.log(`Connecté en tant que ${readyClient.user.tag} ! Hello world!`);
+    console.log(`Connecté en tant que ${readyClient.user.tag}`);
 
-    // 1. Déploie automatiquement les commandes GLOBALEMENT
-    await deployCommands(CLIENT_ID, process.env.Discord!, process.env.GuildID);
+    const missing = missingEmojis();
+    if (missing.length > 0) {
+        console.warn(`[emojis] ${missing.length} emoji(s) sans ID, rendus vides : ${missing.join(", ")}`);
+    }
 
-    // 2. Charge les commandes en mémoire pour le bot
-    await loadCommands();
+    // Les commandes sont chargées en mémoire AVANT d'être déployées : plus de fenêtre où une interaction arrive sans handler.
+    for (const command of await readCommands()) {
+        client.commands.set(command.data.name, command);
+    }
+    await deployCommands(CLIENT_ID, TOKEN, process.env.GuildID);
 });
 
-// Gestion des interactions
+client.on(Events.MessageCreate, (message) => {
+    handleMessageXp(message).catch((error) => console.error("[xp]", error));
+});
+
 client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isChatInputCommand()) {
-        const command = interaction.client.commands.get(interaction.commandName);
-
+        const command = client.commands.get(interaction.commandName);
         if (!command) {
-            console.error(
-                `Aucune commande correspondant à ${interaction.commandName} n'a été trouvée.`,
-            );
+            console.error(`Aucune commande correspondant à ${interaction.commandName}.`);
             return;
         }
 
         try {
+            // Guard exécuté avant chaque commande, sauf exemption explicite (/about, /info).
+            if (!command.bypassGuard && !(await runGuard(interaction))) return;
             await command.execute(interaction);
         } catch (error) {
             console.error(error);
-            const errorMessage = {
-                content:
-                    "Une erreur est survenue lors de l'exécution de cette commande !",
-                flags: MessageFlags.Ephemeral,
-            };
+            const locale = resolveLocale(interaction.locale);
+            const message = reply(panel(withEmoji("error", t(locale, "error.generic"))), { ephemeral: true });
 
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(errorMessage);
+                await interaction.followUp(message).catch(() => undefined);
             } else {
-                await interaction.reply(errorMessage);
+                await interaction.reply(message).catch(() => undefined);
             }
         }
-    } 
-    else if (interaction.isAutocomplete()) {
-        const command = interaction.client.commands.get(interaction.commandName);
-
-        if (!command) return;
-
+    } else if (interaction.isAutocomplete()) {
+        const command = client.commands.get(interaction.commandName);
         try {
-            if ("autocomplete" in command && typeof command.autocomplete === "function") {
-                command.autocomplete(interaction);
-            }
+            await command?.autocomplete?.(interaction);
         } catch (error) {
             console.error("Erreur lors de l'autocomplétion :", error);
         }
     }
 });
 
-// Connexion du bot
-client.login(process.env.Discord);
+process.on("unhandledRejection", (reason) => console.error("[unhandledRejection]", reason));
+
+client.login(TOKEN);
