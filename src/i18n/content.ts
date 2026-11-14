@@ -13,6 +13,9 @@ type Entry = readonly [name: string, description?: string];
 
 const FR = {
     item: {
+        greater_health_potion: ["Grande potion de soin", "Rend instantanément 90 points de vie."],
+        focus_elixir: ["Élixir de concentration", "Augmente le taux critique de 15 % pendant 3 minutes."],
+        fortune_elixir: ["Élixir de fortune", "Augmente la chance de 25 % pendant 10 minutes."],
         health_potion: ["Potion de soin", "Restaure instantanément 30 points de vie."],
         rusty_sword: ["Épée rouillée", "Une lame usée, mieux que les mains nues."],
         iron_sword: ["Épée de fer", "Une lame de fer fiable."],
@@ -96,6 +99,8 @@ const FR = {
         boss: ["Boss"],
     },
     effect: {
+        focus: ["Concentration", "Augmente le taux critique pendant 3 minutes."],
+        fortune: ["Fortune", "Augmente la chance pendant 10 minutes."],
         regeneration: ["Régénération", "Restaure 10 points de vie chaque seconde pendant 60 secondes."],
         xp_boost: ["Boost d'expérience", "Double l'expérience gagnée pendant 15 minutes."],
     },
@@ -117,6 +122,7 @@ const FR = {
         rogue: ["Voleur", "Un tueur agile qui ne se bat jamais loyalement."],
     },
     shop: {
+        alchemist: ["Alchimiste", "Élixirs et potions pour la route."],
         general_store: ["Boutique générale", "Potions, équipement de base et pochettes mystère."],
     },
     enemy: {

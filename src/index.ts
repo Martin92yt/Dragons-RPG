@@ -10,6 +10,8 @@ import { describeError } from "./core/errors";
 import { registerEventHooks, rememberPresence } from "./core/events";
 import { playerIdOf } from "./core/guard";
 import { handleMessageXp } from "./core/xp";
+import { sendWelcome, WELCOME_START_ID } from "./core/welcome";
+import { showStart } from "./commands/start";
 import { withEmoji } from "./core/emojis";
 import { panel, reply } from "./core/ui";
 import { resolveLocale, t } from "./i18n";
@@ -36,6 +38,7 @@ client.once(Events.ClientReady, async (readyClient) => {
         client.commands.set(command.data.name, command);
     }
     registerEventHooks(client);
+    readyClient.user.setActivity("/start • Dragons RPG");
     await deployCommands(CLIENT_ID, TOKEN, process.env.GuildID);
 });
 
@@ -59,6 +62,10 @@ async function shutdown(signal: string): Promise<void> {
 process.once("SIGINT", () => void shutdown("SIGINT"));
 process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
+client.on(Events.GuildCreate, (guild) => {
+    sendWelcome(guild).catch((error) => console.error("[welcome]", error));
+});
+
 client.on(Events.MessageCreate, (message) => {
     handleMessageXp(message).catch((error) => console.error("[xp]", error));
 });
@@ -74,9 +81,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         try {
             // Guard exécuté avant chaque commande, sauf exemption explicite (/about, /info).
             if (!command.bypassGuard && !(await runGuard(interaction, command))) return;
-            if (interaction.inGuild() && interaction.channelId) {
+            if (interaction.channelId) {
                 rememberPresence(
-                    playerIdOf(interaction.guildId, interaction.user.id),
+                    playerIdOf(interaction.user.id),
                     interaction.channelId,
                     resolveLocale(interaction.locale),
                 );
@@ -95,6 +102,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 await interaction.reply(message).catch(() => undefined);
             }
         }
+    } else if (interaction.isButton() && interaction.customId === WELCOME_START_ID) {
+        showStart(interaction).catch((error) => console.error("[start]", error));
     } else if (interaction.isAutocomplete()) {
         const command = client.commands.get(interaction.commandName);
         try {

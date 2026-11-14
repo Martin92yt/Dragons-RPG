@@ -19,6 +19,8 @@ declare global {
          * (`/about`, `/info`, `/admin`).
          */
         bypassGuard?: boolean;
+        /** Commande déployée uniquement sur le serveur propriétaire (`OwnerGuildID`) et réservée à `OwnerID`. */
+        ownerOnly?: boolean;
         /**
          * États bloquants tolérés pour cette invocation précise.
          * Sert aux seules actions qui sont la sortie de l'état : attaquer ou fuir pendant un combat.

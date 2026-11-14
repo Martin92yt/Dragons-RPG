@@ -47,8 +47,8 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
         return suggest(interaction, (job?.actions ?? []).map((a) => ({ name: actionName(locale, a.id, a.name), value: a.id })));
     }
 
-    if (focused === "item" && interaction.inGuild()) {
-        const player = await loadPlayer(interaction.client, interaction.guildId!, interaction.user.id);
+    if (focused === "item") {
+        const player = await loadPlayer(interaction.client, interaction.user.id);
         const records = player ? await player.inventory.getItems() : [];
         return suggest(
             interaction,

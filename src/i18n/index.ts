@@ -12,13 +12,14 @@ import { adventure } from "./messages/adventure";
 import { social } from "./messages/social";
 import { admin } from "./messages/admin";
 import { anime } from "./messages/anime";
+import { guide } from "./messages/guide";
 
 export type Locale = "fr" | "en-US";
 
 export const DEFAULT_LOCALE: Locale = "en-US";
 export const SUPPORTED_LOCALES: readonly Locale[] = ["fr", "en-US"];
 
-const MODULES = [core, errors, options, character, profile, inventory, economy, progression, adventure, social, admin, anime] as const;
+const MODULES = [core, errors, options, character, profile, inventory, economy, progression, adventure, social, admin, anime, guide] as const;
 
 type KeysOf<M> = M extends Catalog<infer K> ? K : never;
 export type MessageKey = KeysOf<(typeof MODULES)[number]>;

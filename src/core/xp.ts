@@ -22,7 +22,7 @@ export async function handleMessageXp(message: Message): Promise<void> {
     if (message.author.bot || !message.inGuild()) return;
     if (message.content.trim().length < BOT.xp.minMessageLength) return;
 
-    const playerId = playerIdOf(message.guildId, message.author.id);
+    const playerId = playerIdOf(message.author.id);
 
     const now = Date.now();
     const previous = lastGain.get(playerId) ?? 0;

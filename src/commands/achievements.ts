@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from "discord.js";
 import type { AchievementDefinition, AchievementReward } from "dragons-of-legends.js";
+import { playerIdOf } from "../core/guard";
 import { suggest } from "../core/autocomplete";
 import { emoji, withEmoji } from "../core/emojis";
 import { fullDate, itemName, num } from "../core/format";
@@ -27,10 +28,9 @@ export const data = describe(named(new SlashCommandBuilder(), "achievements", "s
     .addSubcommand((sub) => describe(named(sub, "claim", "réclamer"), "achievements.claim.desc"));
 
 export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
-    if (!interaction.inGuild()) return suggest(interaction, []);
     const locale = resolveLocale(interaction.locale);
     const world = interaction.client.RPG;
-    const playerId = `${interaction.guildId}_${interaction.user.id}`;
+    const playerId = playerIdOf(interaction.user.id);
     await suggest(
         interaction,
         world.achievements

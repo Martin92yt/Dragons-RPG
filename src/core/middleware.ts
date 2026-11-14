@@ -33,16 +33,9 @@ export async function runGuard(
 ): Promise<boolean> {
     const locale = resolveLocale(interaction.locale);
 
-    if (!interaction.inGuild() || !interaction.guildId) {
-        await interaction.reply(
-            reply(panel(withEmoji("error", t(locale, "error.guildOnly"))), { ephemeral: true }),
-        );
-        return false;
-    }
-
     const result = await checkPlayerState(
         interaction.client,
-        playerIdOf(interaction.guildId, interaction.user.id),
+        playerIdOf(interaction.user.id),
     );
     if (result.ok) return true;
 

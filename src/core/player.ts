@@ -8,17 +8,13 @@ import { resolveLocale, t } from "../i18n";
 /** Entité joueur telle que renvoyée par le monde. */
 export type Player = NonNullable<Awaited<ReturnType<PlayerManager["get"]>>>;
 
-/** Identifiant Discord de l'utilisateur à partir de l'identifiant joueur (`guildId_userId`). */
+/** Identifiant Discord de l'utilisateur à partir de l'identifiant joueur (identiques : profil global). */
 export function userIdOf(playerId: string): string {
-    return playerId.slice(playerId.indexOf("_") + 1);
+    return playerId;
 }
 
-export async function loadPlayer(
-    client: Client,
-    guildId: string,
-    userId: string,
-): Promise<Player | undefined> {
-    return client.RPG.players.get(playerIdOf(guildId, userId));
+export async function loadPlayer(client: Client, userId: string): Promise<Player | undefined> {
+    return client.RPG.players.get(playerIdOf(userId));
 }
 
 /**
@@ -26,7 +22,7 @@ export async function loadPlayer(
  * S'il n'en a pas, répond (message éphémère) et retourne `null` : la commande doit alors s'arrêter.
  */
 export async function requirePlayer(interaction: ChatInputCommandInteraction): Promise<Player | null> {
-    const player = await loadPlayer(interaction.client, interaction.guildId!, interaction.user.id);
+    const player = await loadPlayer(interaction.client, interaction.user.id);
     if (player) return player;
 
     const locale = resolveLocale(interaction.locale);
@@ -45,7 +41,7 @@ export async function requireTargetPlayer(
 ): Promise<Player | null> {
     if (userId === interaction.user.id) return requirePlayer(interaction);
 
-    const player = await loadPlayer(interaction.client, interaction.guildId!, userId);
+    const player = await loadPlayer(interaction.client, userId);
     if (player) return player;
 
     const locale = resolveLocale(interaction.locale);

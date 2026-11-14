@@ -9,7 +9,7 @@ import { confirm } from "../core/confirm";
 import { withEmoji } from "../core/emojis";
 import { goldText, locationName } from "../core/format";
 import { playerIdOf } from "../core/guard";
-import { persist } from "../core/player";
+import { createCharacter } from "../core/onboarding";
 import { edit, panel, reply } from "../core/ui";
 import { sendPaged } from "../core/paginate";
 import { contentDescription, contentName } from "../i18n/content";
@@ -48,7 +48,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 async function create(interaction: ChatInputCommandInteraction): Promise<void> {
     const locale = resolveLocale(interaction.locale);
     const world = interaction.client.RPG;
-    const id = playerIdOf(interaction.guildId!, interaction.user.id);
+    const id = playerIdOf(interaction.user.id);
 
     if (await world.players.exist(id)) {
         await interaction.reply(
@@ -67,14 +67,7 @@ async function create(interaction: ChatInputCommandInteraction): Promise<void> {
     }
 
     const name = interaction.options.getString("name") ?? interaction.user.displayName;
-    const player = await world.players.create({ id, name, playerClass: classId });
-
-    // Titre de départ : accordé et équipé à la création (et non à chaque consultation du profil).
-    if (world.titles.has("novice_adventurer")) {
-        await player.titles.grant("novice_adventurer");
-        await player.titles.equip("novice_adventurer");
-    }
-    await persist(interaction.client, player);
+    const player = await createCharacter(interaction.client, interaction.user.id, name, classId);
 
     const items = (await player.inventory.getItems()).reduce((sum, item) => sum + item.quantity, 0);
 
@@ -97,7 +90,7 @@ async function create(interaction: ChatInputCommandInteraction): Promise<void> {
 async function remove(interaction: ChatInputCommandInteraction): Promise<void> {
     const locale = resolveLocale(interaction.locale);
     const world = interaction.client.RPG;
-    const id = playerIdOf(interaction.guildId!, interaction.user.id);
+    const id = playerIdOf(interaction.user.id);
 
     if (!(await world.players.exist(id))) {
         await interaction.reply(reply(panel(withEmoji("error", t(locale, "error.noCharacter"))), { ephemeral: true }));

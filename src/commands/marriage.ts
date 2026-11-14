@@ -106,10 +106,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                 }
 
                 // État rechargé à l'acceptation : tout peut avoir changé pendant l'attente.
-                const mine = await checkPlayerState(interaction.client, playerIdOf(interaction.guildId!, interaction.user.id));
-                const theirs = await checkPlayerState(interaction.client, playerIdOf(interaction.guildId!, target.id));
-                const fresh = await loadPlayer(interaction.client, interaction.guildId!, interaction.user.id);
-                const freshOther = await loadPlayer(interaction.client, interaction.guildId!, target.id);
+                const mine = await checkPlayerState(interaction.client, playerIdOf(interaction.user.id));
+                const theirs = await checkPlayerState(interaction.client, playerIdOf(target.id));
+                const fresh = await loadPlayer(interaction.client, interaction.user.id);
+                const freshOther = await loadPlayer(interaction.client, target.id);
                 if (!fresh || !freshOther || !mine.ok || !theirs.ok) {
                     await pressed.update(edit(panel(withEmoji("error", t(locale, "marriage.targetBusy")))));
                     return;

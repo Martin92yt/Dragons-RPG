@@ -1,10 +1,10 @@
 import {
     InteractionContextType,
-    PermissionFlagsBits,
     SlashCommandBuilder,
     type AutocompleteInteraction,
     type ChatInputCommandInteraction,
 } from "discord.js";
+import { BOT } from "../bot.config";
 import { suggest } from "../core/autocomplete";
 import { withEmoji } from "../core/emojis";
 import { itemName, locationName, num } from "../core/format";
@@ -13,8 +13,14 @@ import { panel, reply } from "../core/ui";
 import { contentName } from "../i18n/content";
 import { choice, describe, named, resolveLocale, t, type MessageKey } from "../i18n";
 
-/** Les commandes admin ignorent le guard : un admin doit pouvoir réparer un joueur bloqué. */
+/** Ignore le guard : le propriétaire doit pouvoir réparer un joueur bloqué. */
 export const bypassGuard = true;
+
+/**
+ * Discord ne sait pas restreindre une commande à un utilisateur précis : elle n'est donc déployée que sur le serveur
+ * de développement (`OwnerGuildID`, voir registers.ts) et l'identifiant est revérifié à chaque exécution.
+ */
+export const ownerOnly = true;
 
 const user = (o: import("discord.js").SlashCommandUserOption) =>
     describe(named(o, "user", "joueur"), "opt.user").setRequired(true);
@@ -25,9 +31,8 @@ const modeOption = (o: import("discord.js").SlashCommandStringOption) =>
         .setRequired(true)
         .addChoices(choice("opt.mode.add", "add"), choice("opt.mode.remove", "remove"));
 
-export const data = describe(named(new SlashCommandBuilder(), "admin"), "admin.desc")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .setContexts(InteractionContextType.Guild)
+export const data = describe(named(new SlashCommandBuilder(), "owner", "proprio"), "admin.desc")
+    .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM)
     .addSubcommand((sub) => describe(named(sub, "revive", "ressusciter"), "admin.revive.desc").addUserOption(user))
     .addSubcommand((sub) =>
         describe(named(sub, "item", "objet"), "admin.item.desc")
@@ -91,8 +96,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const say = (key: MessageKey, vars: Record<string, string | number> = {}, ok = true) =>
         interaction.reply(reply(panel(withEmoji(ok ? "admin" : "error", t(locale, key, vars))), { ephemeral: true }));
 
-    // Vérifié à l'exécution en plus des permissions par défaut, que les serveurs peuvent réécrire.
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+    if (!BOT.ownerId || interaction.user.id !== BOT.ownerId) {
         await say("admin.denied", {}, false);
         return;
     }

@@ -15,9 +15,13 @@ export type GuardResult =
           readonly jobId?: string;
       };
 
-/** Identifiant du joueur dans le monde : un profil par serveur. */
-export function playerIdOf(guildId: string, userId: string): string {
-    return `${guildId}_${userId}`;
+/**
+ * Identifiant du joueur dans le monde.
+ * Le profil est global : un seul personnage par utilisateur Discord, partagé entre tous les serveurs
+ * (et les messages privés). C'est le seul endroit à changer pour repasser à un profil par serveur.
+ */
+export function playerIdOf(userId: string): string {
+    return userId;
 }
 
 /**

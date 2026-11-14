@@ -17,9 +17,8 @@ export const data = describe(named(new SlashCommandBuilder(), "bestiary", "besti
     );
 
 export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
-    if (!interaction.inGuild()) return suggest(interaction, []);
     const locale = resolveLocale(interaction.locale);
-    const player = await loadPlayer(interaction.client, interaction.guildId!, interaction.user.id);
+    const player = await loadPlayer(interaction.client, interaction.user.id);
     if (!player) return suggest(interaction, []);
     await suggest(
         interaction,

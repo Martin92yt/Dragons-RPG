@@ -62,8 +62,8 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
 
     const buying = interaction.options.getSubcommand() === "buy";
     const owned = new Map<string, number>();
-    if (!buying && interaction.inGuild()) {
-        const player = await loadPlayer(interaction.client, interaction.guildId!, interaction.user.id);
+    if (!buying) {
+        const player = await loadPlayer(interaction.client, interaction.user.id);
         for (const record of (await player?.inventory.getItems()) ?? []) {
             if (!record.isEquipped) owned.set(record.itemId, (owned.get(record.itemId) ?? 0) + record.quantity);
         }

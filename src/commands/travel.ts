@@ -7,7 +7,7 @@ import { loadPlayer, persist, requirePlayer } from "../core/player";
 import { sendPaged } from "../core/paginate";
 import { edit, panel, reply } from "../core/ui";
 import { describe, formatDuration, named, resolveLocale, t, type Locale } from "../i18n";
-import { enemyName, enemySheet } from "./combat";
+import { ambushView, attachCombatControls, enemyName } from "./combat";
 
 interface Route {
     readonly id: string;
@@ -68,9 +68,8 @@ export const data = describe(named(new SlashCommandBuilder(), "travel", "voyage"
     .addSubcommand((sub) => describe(named(sub, "here", "ici"), "travel.here.desc"));
 
 export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
-    if (!interaction.inGuild()) return suggest(interaction, []);
     const locale = resolveLocale(interaction.locale);
-    const player = await loadPlayer(interaction.client, interaction.guildId!, interaction.user.id);
+    const player = await loadPlayer(interaction.client, interaction.user.id);
     if (!player) return suggest(interaction, []);
     const seen = new Set<string>();
     const choices = routesFrom(interaction.client.RPG, player.location)
@@ -148,23 +147,25 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             const result = await player.moveTo(destination, route.distance, route.danger);
             await persist(interaction.client, player);
 
-            const blocks: string[] = [
-                `## ${withEmoji("location", t(locale, "travel.arrived", { place: locationName(locale, result.locationId), duration: formatDuration(result.travelDurationMs) }))}`,
-            ];
+            const arrival = result.arrived
+                ? `## ${withEmoji("location", t(locale, "travel.arrived", { place: locationName(locale, result.locationId), duration: formatDuration(result.travelDurationMs) }))}`
+                : `## ${withEmoji("travel", t(locale, "travel.interrupted", { place }))}`;
+
             if (result.attacked && result.enemy) {
-                blocks.push(
-                    withEmoji(
-                        "enemy",
-                        t(locale, "travel.ambushed", {
-                            enemy: enemyName(locale, result.enemy),
-                            tier: tierLabel(locale, result.enemy.tier),
-                        }),
-                    ),
-                    enemySheet(locale, result.enemy).join("\n"),
+                // Embuscade : le combat a déjà commencé, on affiche directement l'interface de combat.
+                const ambush = withEmoji(
+                    "enemy",
+                    t(locale, "travel.ambushed", {
+                        enemy: enemyName(locale, result.enemy),
+                        tier: tierLabel(locale, result.enemy.tier),
+                    }),
                 );
+                const view = await ambushView(interaction.client, locale, player, result.enemy, [arrival, ambush]);
+                const message = await interaction.editReply(edit(view) as never);
+                attachCombatControls(message, interaction.client, player, locale);
+                return;
             }
-            if (!result.arrived) blocks[0] = `## ${withEmoji("travel", t(locale, "travel.interrupted", { place }))}`;
-            await interaction.editReply(edit(panel(...blocks)) as never);
+            await interaction.editReply(edit(panel(arrival)) as never);
         }
     }
 }

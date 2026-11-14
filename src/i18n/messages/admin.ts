@@ -2,8 +2,8 @@ import { defineMessages } from "../define";
 
 export const admin = defineMessages({
     fr: {
-        "admin.desc": "Outils d'administration du jeu.",
-        "admin.denied": "Cette commande est réservée aux administrateurs du serveur.",
+        "admin.desc": "Outils du propriétaire du bot.",
+        "admin.denied": "Cette commande est réservée au propriétaire du bot.",
         "admin.noTarget": "Ce joueur n'a pas de personnage.",
         "admin.revive.desc": "Ressuscite un joueur.",
         "admin.item.desc": "Donne ou retire un objet.",
@@ -34,8 +34,8 @@ export const admin = defineMessages({
         "admin.blocked": "{user} est en combat ou en voyage : action refusée.",
     },
     "en-US": {
-        "admin.desc": "Game administration tools.",
-        "admin.denied": "This command is reserved for server administrators.",
+        "admin.desc": "Bot owner tools.",
+        "admin.denied": "This command is reserved for the bot owner.",
         "admin.noTarget": "This player has no character.",
         "admin.revive.desc": "Revive a player.",
         "admin.item.desc": "Give or remove an item.",
