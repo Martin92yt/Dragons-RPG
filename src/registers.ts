@@ -1,3 +1,4 @@
+import { log } from "./core/logger";
 import { REST, Routes } from "discord.js";
 import { readCommands } from "./core/commands";
 
@@ -19,23 +20,23 @@ export async function deployCommands(clientId: string, token: string, guildId?: 
 
     try {
         if (devGuild) {
-            console.log(`Déploiement de ${publicBody.length} commande(s) sur la guilde ${devGuild}...`);
+            log.deploy.info(`Déploiement de ${publicBody.length} commande(s) sur la guilde ${devGuild}...`);
             await rest.put(Routes.applicationGuildCommands(clientId, devGuild), {
                 body: ownerGuild === devGuild ? [...publicBody, ...ownerBody] : publicBody,
             });
         } else {
-            console.log(`Déploiement global de ${publicBody.length} commande(s) (peut prendre du temps)...`);
+            log.deploy.info(`Déploiement global de ${publicBody.length} commande(s) (peut prendre du temps)...`);
             await rest.put(Routes.applicationCommands(clientId), { body: publicBody });
         }
 
         if (ownerGuild && ownerGuild !== devGuild) {
-            console.log(`Déploiement de ${ownerBody.length} commande(s) propriétaire sur la guilde ${ownerGuild}...`);
+            log.deploy.info(`Déploiement de ${ownerBody.length} commande(s) propriétaire sur la guilde ${ownerGuild}...`);
             await rest.put(Routes.applicationGuildCommands(clientId, ownerGuild), { body: ownerBody });
         } else if (!ownerGuild) {
-            console.warn("[owner] OwnerGuildID absent : la commande /owner n'est pas déployée.");
+            log.deploy.warn("OwnerGuildID absent : la commande /owner n'est pas déployée.");
         }
-        console.log("Commandes déployées avec succès.");
+        log.deploy.info("Commandes déployées avec succès.");
     } catch (error) {
-        console.error("Erreur lors du déploiement des commandes :", error);
+        log.deploy.error("Erreur lors du déploiement des commandes", error);
     }
 }

@@ -1,13 +1,13 @@
 import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from "discord.js";
 import { LocationFlags } from "dragons-of-legends.js";
 import { suggest } from "../core/autocomplete";
-import { withEmoji } from "../core/emojis";
+import { emoji, locationIcon, withEmoji } from "../core/emojis";
+import { wrap } from "../core/text";
 import { locationName, tierLabel } from "../core/format";
 import { loadPlayer, persist, requirePlayer } from "../core/player";
-import { sendPaged } from "../core/paginate";
 import { edit, panel, reply } from "../core/ui";
-import { describe, formatDuration, named, resolveLocale, t, type Locale } from "../i18n";
-import { ambushView, attachCombatControls, enemyName } from "./combat";
+import { describe, formatDuration, named, resolveLocale, t, type Locale, type MessageKey } from "../i18n";
+import { ambushEdit, attachCombatControls, enemyName } from "./combat";
 
 interface Route {
     readonly id: string;
@@ -79,12 +79,14 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
 }
 
 function routeLine(locale: Locale, route: Route): string {
-    return `• ${t(locale, "travel.route", {
+    return t(locale, "travel.route", {
+        mode: emoji(route.mode === "land" ? "travel" : "boat"),
         place: locationName(locale, route.id),
-        mode: t(locale, route.mode === "land" ? "travel.land" : "travel.boat"),
+        distanceIcon: emoji("distance"),
         distance: route.distance,
+        dangerIcon: emoji("danger"),
         danger: route.danger,
-    })}`;
+    });
 }
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -96,13 +98,16 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     switch (interaction.options.getSubcommand()) {
         case "here": {
             const flags = readMap(world).find((place) => place.locationId === player.location)?.locationFlags ?? 0;
+            const type = world.location.get(player.location)?.locationType ?? "city";
             const routes = routesFrom(world, player.location);
             await interaction.reply(
                 reply(
                     panel(
-                        `## ${withEmoji("location", t(locale, "travel.hereTitle"))}`,
-                        `**${locationName(locale, player.location)}**${flagsText(locale, flags) ? ` — ${flagsText(locale, flags)}` : ""}`,
-                        `**${t(locale, "travel.routes")}**\n${routes.length > 0 ? routes.map((r) => routeLine(locale, r)).join("\n") : t(locale, "travel.noRoutes")}`,
+                        `## ${emoji(locationIcon(type))} ${locationName(locale, player.location)}`,
+                        flagsText(locale, flags) ? `-# ${flagsText(locale, flags)}` : null,
+                        routes.length > 0
+                            ? `${routes.map((r) => routeLine(locale, r)).join("\n")}\n-# ${t(locale, "travel.legend", { distanceIcon: emoji("distance"), dangerIcon: emoji("danger") })}`
+                            : t(locale, "travel.noRoutes"),
                     ),
                     { ephemeral: true },
                 ),
@@ -111,22 +116,24 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         }
 
         case "map": {
-            const lines = readMap(world).map((place) => {
-                const mark = place.locationId === player.location ? ` ← ${t(locale, "travel.here")}` : "";
-                const flags = flagsText(locale, place.locationFlags);
-                const links = new Set(
-                    [...place.travelConnections.landRoutes, ...place.travelConnections.boatRoutes].map((r) =>
-                        locationName(locale, r.destinationLocationId),
-                    ),
-                );
-                return `**${locationName(locale, place.locationId)}**${mark}${flags ? ` (${flags})` : ""}\n  ${[...links].join(", ")}`;
-            });
-            await sendPaged(interaction, locale, {
-                title: withEmoji("map", t(locale, "travel.mapTitle")),
-                lines,
-                perPage: 8,
-                ephemeral: true,
-            });
+            // Carte volontairement sobre : les lieux par type, le tien marqué. Les routes sont dans `/travel here`.
+            const places = readMap(world);
+            const groups = new Map<string, string[]>();
+            for (const place of places) {
+                const type = world.location.get(place.locationId)?.locationType ?? "city";
+                const here = place.locationId === player.location;
+                const name = here ? `**${locationName(locale, place.locationId)}** ${emoji("location")}` : locationName(locale, place.locationId);
+                groups.set(type, [...(groups.get(type) ?? []), name]);
+            }
+            const blocks = [...groups].map(
+                ([type, names]) => `### ${emoji(locationIcon(type))} ${t(locale, `location.${type}` as MessageKey)}\n${wrap(names.join("  •  "))}`,
+            );
+            await interaction.reply(
+                reply(
+                    panel(`## ${emoji("map")} ${t(locale, "travel.mapTitle")}`, ...blocks, `-# ${t(locale, "travel.mapHint")}`),
+                    { ephemeral: true },
+                ),
+            );
             return;
         }
 
@@ -160,8 +167,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                         tier: tierLabel(locale, result.enemy.tier),
                     }),
                 );
-                const view = await ambushView(interaction.client, locale, player, result.enemy, [arrival, ambush]);
-                const message = await interaction.editReply(edit(view) as never);
+                const payload = await ambushEdit(interaction.client, locale, player, result.enemy, [arrival, ambush]);
+                const message = await interaction.editReply(payload as never);
                 attachCombatControls(message, interaction.client, player, locale);
                 return;
             }

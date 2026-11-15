@@ -1,5 +1,5 @@
 import { REGISTRY } from "./emojis.registry";
-import { ICONS, type Icon } from "./icons";
+import { CATEGORY_ICONS, ICONS, JOB_ICONS, LOCATION_ICONS, type Icon } from "./icons";
 
 /** Clé directe du registre d'emojis (`emojis.registry.ts`). */
 export type RegistryKey = keyof typeof REGISTRY;
@@ -24,3 +24,13 @@ export function emoji(key: EmojiKey): string {
 export function withEmoji(key: EmojiKey, text: string): string {
     return `${emoji(key)} ${text}`;
 }
+
+/** Données d'emoji pour les menus de sélection (`{ id, name }` au lieu de la forme `<:nom:id>`). */
+export function emojiData(key: EmojiKey): { id: string; name: string } {
+    const entry = REGISTRY[resolve(key)];
+    return { id: entry.id, name: entry.name };
+}
+
+export const categoryIcon = (category: string): EmojiKey => CATEGORY_ICONS[category] ?? "inventory";
+export const jobIcon = (jobId: string): EmojiKey => JOB_ICONS[jobId] ?? "jobs";
+export const locationIcon = (type: string): EmojiKey => LOCATION_ICONS[type] ?? "location";

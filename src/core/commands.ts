@@ -1,3 +1,4 @@
+import { log } from "./logger";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -24,7 +25,7 @@ export async function readCommands(): Promise<BotCommand[]> {
         if (command.data && typeof command.execute === "function") {
             commands.push(command as BotCommand);
         } else {
-            console.warn(`[AVERTISSEMENT] ${file} n'exporte pas "data" et "execute".`);
+            log.command.warn(`${file} n'exporte pas "data" et "execute".`);
         }
     }
     return commands;

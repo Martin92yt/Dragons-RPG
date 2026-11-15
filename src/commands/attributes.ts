@@ -1,9 +1,20 @@
-import { SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
-import { withEmoji } from "../core/emojis";
+import {
+    ButtonBuilder,
+    ButtonStyle,
+    ComponentType,
+    ContainerBuilder,
+    SectionBuilder,
+    SeparatorBuilder,
+    SeparatorSpacingSize,
+    SlashCommandBuilder,
+    TextDisplayBuilder,
+    type ChatInputCommandInteraction,
+} from "discord.js";
+import { emoji, withEmoji } from "../core/emojis";
 import { attributeLabel } from "../core/format";
-import { persist, requirePlayer } from "../core/player";
-import { panel, reply } from "../core/ui";
-import { choice, describe, named, resolveLocale, t } from "../i18n";
+import { persist, requirePlayer, type Player } from "../core/player";
+import { edit, panel, reply } from "../core/ui";
+import { choice, describe, named, resolveLocale, t, type Locale } from "../i18n";
 
 const ATTRIBUTES = ["strength", "agility", "intelligence", "defense"] as const;
 type Attribute = (typeof ATTRIBUTES)[number];
@@ -58,14 +69,52 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         return;
     }
 
+    const response = await interaction.reply({ ...reply(attributesView(locale, player), { ephemeral: true }), withResponse: true });
+    const message = response.resource!.message!;
+
+    // Boutons +1 : réservés à leur propriétaire, actifs 5 minutes après la dernière action.
+    const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, idle: 5 * 60_000 });
+    collector.on("collect", async (pressed) => {
+        if (pressed.user.id !== interaction.user.id) return void pressed.deferUpdate().catch(() => undefined);
+        const attribute = pressed.customId.replace("attr:", "") as Attribute;
+        if (!ATTRIBUTES.includes(attribute)) return;
+        if (player.attributes.points > 0) {
+            player.levelUpSkill(attribute);
+            await persist(interaction.client, player);
+        }
+        await pressed.update(edit(attributesView(locale, player))).catch(() => undefined);
+    });
+    collector.on("end", () => {
+        interaction.editReply(edit(attributesView(locale, player, true)) as never).catch(() => undefined);
+    });
+}
+
+/** Vue des attributs : une ligne par attribut, avec son bouton +1 à droite tant qu'il reste des points. */
+function attributesView(locale: Locale, player: Player, disabled = false): ContainerBuilder {
     const { attributes } = player;
-    await interaction.reply(
-        reply(
-            panel(
-                `## ${withEmoji("skillPoints", t(locale, "attributes.title"))}`,
-                ATTRIBUTES.map((a) => withEmoji(a, `**${attributeLabel(locale, a)}** : ${attributes[a]}`)).join("\n"),
-                t(locale, "attributes.points", { points: attributes.points }),
-            ),
+    const container = new ContainerBuilder().addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `## ${emoji("skillPoints")} ${t(locale, "attributes.title")}\n${t(locale, "attributes.points", { points: attributes.points })}`,
         ),
     );
+    for (const attribute of ATTRIBUTES) {
+        container
+            .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(false))
+            .addSectionComponents(
+                new SectionBuilder()
+                    .addTextDisplayComponents(
+                        new TextDisplayBuilder().setContent(
+                            `### ${emoji(attribute)} ${attributeLabel(locale, attribute)}\n**${attributes[attribute]}**`,
+                        ),
+                    )
+                    .setButtonAccessory(
+                        new ButtonBuilder()
+                            .setCustomId(`attr:${attribute}`)
+                            .setLabel("+1")
+                            .setStyle(ButtonStyle.Secondary)
+                            .setDisabled(disabled || attributes.points <= 0),
+                    ),
+            );
+    }
+    return container;
 }

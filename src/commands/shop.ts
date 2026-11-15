@@ -1,12 +1,13 @@
 import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from "discord.js";
 import { suggest } from "../core/autocomplete";
 import { withEmoji } from "../core/emojis";
-import { goldText, itemDescription, itemName } from "../core/format";
+import { goldText, itemName } from "../core/format";
 import { loadPlayer, persist, requirePlayer } from "../core/player";
-import { sendPaged } from "../core/paginate";
-import { panel, reply } from "../core/ui";
+import { describeError } from "../core/errors";
+import { log } from "../core/logger";
+import { edit, panel, reply } from "../core/ui";
 import { contentName } from "../i18n/content";
-import { contentDescription } from "../i18n/content";
+import { shopView, type ShopState } from "../views/shop";
 import { describe, named, resolveLocale, t } from "../i18n";
 
 
@@ -95,27 +96,51 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const sub = interaction.options.getSubcommand();
 
     if (sub === "list") {
-        const description = contentName(locale, "shop", shop.id, shop.name);
-        const lines = shop.listings.map((listing) => {
-            const item = world.shops.getItem(shop.id, listing.itemId);
-            const name = item ? itemName(locale, item) : listing.itemId;
-            const text = item ? itemDescription(locale, item) : undefined;
-            const parts = [
-                listing.price !== undefined
-                    ? t(locale, "shop.buyPrice", { price: goldText(locale, listing.price) })
-                    : t(locale, "shop.notForSale"),
-                listing.sellPrice !== undefined
-                    ? t(locale, "shop.sellPrice", { price: goldText(locale, listing.sellPrice) })
-                    : null,
-                listing.minLevel !== undefined ? t(locale, "shop.minLevel", { level: listing.minLevel }) : null,
-            ].filter(Boolean);
-            return `**${name}** — ${parts.join(" • ")}${text ? `\n  *${text}*` : ""}`;
+        const state: ShopState = { category: "all", page: 0 };
+        const render = () => shopView(locale, world, player, shop.id, state);
+        const response = await interaction.reply({ ...reply(render(), { ephemeral: true }), withResponse: true });
+        const message = response.resource!.message!;
+
+        const collector = message.createMessageComponentCollector({ idle: 5 * 60_000 });
+        collector.on("collect", async (pressed) => {
+            if (pressed.user.id !== interaction.user.id) {
+                await pressed.reply(reply(panel(withEmoji("error", t(locale, "shop.notYours"))), { ephemeral: true })).catch(() => undefined);
+                return;
+            }
+            try {
+                state.note = undefined;
+                if (pressed.isStringSelectMenu() && pressed.customId === "shop:category") {
+                    state.category = pressed.values[0] ?? "all";
+                    state.page = 0;
+                } else if (pressed.isButton()) {
+                    if (pressed.customId === "shop:prev") state.page = Math.max(0, state.page - 1);
+                    else if (pressed.customId === "shop:next") state.page += 1;
+                    else if (pressed.customId.startsWith("shop:buy:")) {
+                        const bought = pressed.customId.slice("shop:buy:".length);
+                        try {
+                            const result = await world.shops.buy(player, shop.id, bought, 1);
+                            await persist(interaction.client, player);
+                            const item = world.shops.getItem(shop.id, bought);
+                            state.note = withEmoji(
+                                "success",
+                                t(locale, "shop.boughtShort", {
+                                    item: item ? itemName(locale, item) : bought,
+                                    total: goldText(locale, result.totalPrice),
+                                }),
+                            );
+                        } catch (error) {
+                            // Erreur de la librairie (niveau, or, inventaire plein...) : message traduit en note.
+                            state.note = withEmoji("error", describeError(locale, error) ?? t(locale, "error.generic"));
+                        }
+                    }
+                }
+                await pressed.update(edit(render()));
+            } catch (error) {
+                log.command.error("shop", error);
+            }
         });
-        await sendPaged(interaction, locale, {
-            title: withEmoji("shop", description),
-            intro: contentDescription(locale, "shop", shop.id, shop.description),
-            lines,
-            perPage: 6,
+        collector.on("end", () => {
+            interaction.editReply(edit(shopView(locale, world, player, shop.id, state)) as never).catch(() => undefined);
         });
         return;
     }

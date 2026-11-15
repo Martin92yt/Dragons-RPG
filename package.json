@@ -12,6 +12,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.1.1",
+    "consola": "^3.4.2",
     "discord.js": "^14.28.1",
     "dotenv": "^18.0.10",
     "dragons-of-legends.js": "^0.1.5",

@@ -1,12 +1,12 @@
 import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from "discord.js";
 import type { JobReward } from "dragons-of-legends.js/dist/jobs/job.types.js";
 import { suggest } from "../core/autocomplete";
-import { withEmoji } from "../core/emojis";
+import { emoji, jobIcon, withEmoji } from "../core/emojis";
 import { goldText, itemName, num } from "../core/format";
 import { runJobSession } from "../core/job-sessions";
 import { loadPlayer, persist, requirePlayer } from "../core/player";
 import { sendPaged } from "../core/paginate";
-import { bar, edit, panel, reply } from "../core/ui";
+import { edit, emojiBar, panel, reply } from "../core/ui";
 import { contentName } from "../i18n/content";
 import { describe, formatDuration, named, resolveLocale, t, type Locale } from "../i18n";
 
@@ -89,7 +89,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                     extra: extra.length > 0 ? ` • ${extra.join(", ")}` : "",
                 })}`;
             });
-            return `${withEmoji("jobs", `**${jobName(locale, job.id, job.name)}**`)}\n${actions.join("\n")}`;
+            return `${withEmoji(jobIcon(job.id), `**${jobName(locale, job.id, job.name)}**`)}\n${actions.join("\n")}`;
         });
         await sendPaged(interaction, locale, {
             title: t(locale, "jobs.listTitle"),
@@ -110,13 +110,13 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                 .filter(({ ms }) => ms > 0)
                 .map(({ a, ms }) => `${actionName(locale, a.id, a.name)}: ${formatDuration(ms)}`);
             return [
-                t(locale, "jobs.progressLine", {
+                `${emoji(jobIcon(view.jobId))} ${t(locale, "jobs.progressLine", {
                     job: jobName(locale, view.jobId, view.name),
                     level: view.level,
                     max: view.maxLevel,
-                    bar: bar(view.percent, 100, 10),
+                    bar: emojiBar(view.percent, 100, 6),
                     percent: Math.round(view.percent),
-                }),
+                })}`,
                 `  ${tool ? t(locale, "jobs.tool", { tool }) : t(locale, "jobs.noTool")}${cooldowns.length > 0 ? ` • ${t(locale, "jobs.cooldownLeft", { time: cooldowns.join(", ") })}` : ""}`,
             ].join("\n");
         });
@@ -179,7 +179,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                     reply(
                         panel(
                             withEmoji(
-                                "jobs",
+                                jobIcon(jobId),
                                 t(locale, "jobs.started", {
                                     job: jobLabel,
                                     action: actionName(locale, action.id, action.name),
@@ -206,7 +206,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     await interaction.editReply(
         edit(
             panel(
-                `## ${withEmoji("jobs", `${t(locale, "jobs.finished")} — ${actionName(locale, action.id, action.name)}`)}`,
+                `## ${withEmoji(jobIcon(jobId), `${t(locale, "jobs.finished")} — ${actionName(locale, action.id, action.name)}`)}`,
                 `**${t(locale, "jobs.loot")}**\n${loot}`,
                 t(locale, "jobs.xpGained", { xp: num(locale, result.xpGained) }),
                 result.level > result.previousLevel ? withEmoji("level", t(locale, "jobs.levelUp", { level: result.level })) : null,

@@ -54,6 +54,50 @@ export const ICONS = {
     success: "tick",
     friends: "friends",
     shuffle: "refresh",
+    distance: "compass",
+    danger: "skull",
+    buy: "creditcard",
+    plus: "plus",
+    guide: "book",
+    next: "arrowright",
+    previous: "arrowleft",
+    city: "town",
+    village: "village",
+    dungeon: "tower",
+    classAttackStrength: "broadsword",
+    classAttackAgility: "bow",
+    classAttackIntelligence: "wand",
 } as const satisfies Record<string, RegistryKey>;
 
 export type Icon = keyof typeof ICONS;
+
+/** Icône de chaque catégorie d'objet (boutique, inventaire). */
+export const CATEGORY_ICONS: Record<string, Icon> = {
+    weapons: "strength",
+    armor: "defense",
+    consumables: "effect",
+    materials: "inventory",
+    valuables: "gold",
+    amulet: "title",
+    tool: "tool",
+};
+
+/** Icône de chaque métier ; un métier ajouté par un pack retombe sur `jobs`. */
+export const JOB_ICONS: Record<string, Icon | RegistryKey> = {
+    fishing: "fishing",
+    mining: "pickaxe",
+    woodcutting: "axe",
+};
+
+/** Icônes des types de lieux (carte du monde). */
+export const LOCATION_ICONS: Record<string, Icon> = {
+    city: "city",
+    village: "village",
+    dungeon: "dungeon",
+};
+
+/**
+ * Paliers d'une barre de progression : du vide au plein. Pour changer l'apparence des barres,
+ * remplace ces clés du registre (une par palier, de 0 % à 100 %).
+ */
+export const PROGRESS_STEPS: readonly RegistryKey[] = ["progress", "progress02", "progress03", "progress04", "progress05"];

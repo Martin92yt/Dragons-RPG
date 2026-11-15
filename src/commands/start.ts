@@ -6,14 +6,20 @@ import {
     type ButtonInteraction,
     type ChatInputCommandInteraction,
 } from "discord.js";
-import { withEmoji } from "../core/emojis";
-import { attributeLabel, goldText } from "../core/format";
+import { emoji, emojiData, withEmoji } from "../core/emojis";
+import { goldText } from "../core/format";
+import { wrap } from "../core/text";
 import { attachGuideMenu, guideView } from "../core/guide";
 import { playerIdOf } from "../core/guard";
 import { createCharacter } from "../core/onboarding";
 import { edit, panel, reply } from "../core/ui";
 import { contentDescription, contentName } from "../i18n/content";
 import { describe, named, resolveLocale, t } from "../i18n";
+
+/** Icône d'une classe selon sa statistique d'attaque. */
+function classIcon(attackStat: string | undefined) {
+    return attackStat === "agility" ? "classAttackAgility" : attackStat === "intelligence" ? "classAttackIntelligence" : "classAttackStrength";
+}
 
 export const data = describe(named(new SlashCommandBuilder(), "start", "démarrer"), "start.desc");
 
@@ -39,27 +45,37 @@ export async function showStart(interaction: ChatInputCommandInteraction | Butto
         return;
     }
 
-    const classes = world.classes.list();
+    const classes = world.classes.list().slice(0, 25);
+    const stat = (c: (typeof classes)[number], key: "strength" | "agility" | "intelligence" | "defense") =>
+        `${emoji(key)} **${c.baseStats[key]}**`;
+
+    // Les classes sont décrites dans le message (statistiques avec leurs emojis) : le menu ne garde que le nom.
+    const classBlocks = classes.map((c) => {
+        const description = contentDescription(locale, "class", c.id, c.description);
+        return [
+            `${emoji(classIcon(c.attackStat))} **${contentName(locale, "class", c.id, c.name)}**`,
+            description ? wrap(description) : null,
+            (["strength", "agility", "intelligence", "defense"] as const).map((key) => stat(c, key)).join("  •  "),
+        ]
+            .filter(Boolean)
+            .join("\n");
+    });
+
     const menu = new StringSelectMenuBuilder()
         .setCustomId("start:class")
         .setPlaceholder(t(locale, "start.classPlaceholder"))
         .addOptions(
-            classes.slice(0, 25).map((c) => {
-                const stats = (["strength", "agility", "intelligence", "defense"] as const)
-                    .map((stat) => `${attributeLabel(locale, stat)} ${c.baseStats[stat]}`)
-                    .join(" • ");
-                const description = contentDescription(locale, "class", c.id, c.description);
-                return {
-                    label: contentName(locale, "class", c.id, c.name).slice(0, 100),
-                    description: (description ? `${description} — ${stats}` : stats).slice(0, 100),
-                    value: c.id,
-                };
-            }),
+            classes.map((c) => ({
+                label: contentName(locale, "class", c.id, c.name).slice(0, 100),
+                emoji: emojiData(classIcon(c.attackStat)),
+                value: c.id,
+            })),
         );
 
     const welcome = panel(
         `## ${withEmoji("character", t(locale, "start.welcomeTitle"))}`,
-        t(locale, "start.welcomeBody"),
+        wrap(t(locale, "start.welcomeBody")),
+        ...classBlocks,
         t(locale, "start.pickClass"),
     );
     welcome.addActionRowComponents(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu));

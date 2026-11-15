@@ -6,7 +6,7 @@ import { emoji, withEmoji } from "../core/emojis";
 import { fullDate, itemName, num } from "../core/format";
 import { persist, requirePlayer } from "../core/player";
 import { sendPaged } from "../core/paginate";
-import { bar, panel, reply } from "../core/ui";
+import { emojiBar, panel, reply } from "../core/ui";
 import { contentDescription, contentName } from "../i18n/content";
 import { choice, describe, named, resolveLocale, t, type Locale } from "../i18n";
 
@@ -118,7 +118,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                 panel(
                     `## ${withEmoji("achievement", title(locale, achievement))}`,
                     contentDescription(locale, "achievement", achievement.id, achievement.description),
-                    `${bar(view.percent, 100, 12)} ${t(locale, "achievements.percent", { percent: Math.round(view.percent) })}${
+                    `${emojiBar(view.percent, 100, 8)} ${t(locale, "achievements.percent", { percent: Math.round(view.percent) })}${
                         view.unlockedAt ? ` • ${t(locale, "achievements.unlockedOn", { date: fullDate(view.unlockedAt) })}` : ""
                     }`,
                     criteria.length > 0 ? `**${t(locale, "achievements.criteria")}**\n${criteria.join("\n")}` : null,
@@ -146,7 +146,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         const hiddenLocked = a.hidden && !view.unlocked;
         const line = hiddenLocked
             ? `${t(locale, "achievements.hidden")} — *${t(locale, "achievements.hiddenText")}*`
-            : `${view.unlocked ? `${emoji("tick")} ` : ""}**${title(locale, a)}** — ${view.unlocked ? t(locale, "achievements.unlockedOn", { date: fullDate(view.unlockedAt ?? 0) }) : `${bar(view.percent, 100, 8)} ${t(locale, "achievements.percent", { percent: Math.round(view.percent) })}`}`;
+            : `${view.unlocked ? `${emoji("tick")} ` : ""}**${title(locale, a)}** — ${view.unlocked ? t(locale, "achievements.unlockedOn", { date: fullDate(view.unlockedAt ?? 0) }) : `${emojiBar(view.percent, 100, 8)} ${t(locale, "achievements.percent", { percent: Math.round(view.percent) })}`}`;
         const bucket = groups.get(category) ?? [];
         bucket.push(`• ${line}`);
         groups.set(category, bucket);

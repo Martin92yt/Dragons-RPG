@@ -1,8 +1,12 @@
+import { log } from "../core/logger";
 import {
     ApplicationIntegrationType,
     ButtonBuilder,
     ButtonStyle,
     ComponentType,
+    ContainerBuilder,
+    SeparatorBuilder,
+    SeparatorSpacingSize,
     InteractionContextType,
     MediaGalleryBuilder,
     MediaGalleryItemBuilder,
@@ -13,7 +17,7 @@ import {
 } from "discord.js";
 import { Gifuto, type Gif } from "gifuto.js";
 import { BOT } from "../bot.config";
-import { emoji, withEmoji } from "../core/emojis";
+import { emoji, emojiData, withEmoji } from "../core/emojis";
 import { num } from "../core/format";
 import { edit, panel, reply, withButtons } from "../core/ui";
 import { describe, localizations, named, resolveLocale, t, type Locale } from "../i18n";
@@ -59,7 +63,7 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
             }));
         await interaction.respond(choices);
     } catch (error) {
-        console.error("[anime] autocomplete", error);
+        log.anime.error("autocomplete", error);
         await interaction.respond([]).catch(() => undefined);
     }
 }
@@ -81,19 +85,33 @@ function infoLines(locale: Locale, gif: Gif): string {
     return lines.join("\n");
 }
 
+/**
+ * Mise en page : titre, image pleine largeur, infos, puis le bouton seul sur sa rangée tout en bas.
+ * (Un bouton placé à côté du texte, en `Section`, ferait rétrécir l'image : on évite.)
+ */
 function view(locale: Locale, gif: Gif, header: string, disabled: boolean, buttonId: string) {
-    const container = panel(header, infoLines(locale, gif));
-    container.addMediaGalleryComponents(
-        new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(transformTenorUrl(gif.url))),
-    );
-    container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-            `-# ${t(locale, "anime.hits", { hits: num(locale, gif.hits) })} • ${emoji("share02")} ${t(locale, "anime.credit", { url: BOT.links.gifuto })}`,
-        ),
-    );
+    const info = infoLines(locale, gif);
+    const container = new ContainerBuilder()
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(header))
+        .addMediaGalleryComponents(
+            new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(transformTenorUrl(gif.url))),
+        );
+    if (info) container.addTextDisplayComponents(new TextDisplayBuilder().setContent(info));
+    container
+        .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+                `-# ${t(locale, "anime.hits", { hits: num(locale, gif.hits) })} • ${emoji("share02")} ${t(locale, "anime.credit", { url: BOT.links.gifuto })}`,
+            ),
+        )
+        .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true));
     return withButtons(
         container,
-        new ButtonBuilder().setCustomId(buttonId).setLabel(t(locale, "anime.another")).setStyle(ButtonStyle.Secondary).setDisabled(disabled),
+        new ButtonBuilder()
+            .setCustomId(buttonId)
+            .setLabel(t(locale, "anime.another"))
+            .setEmoji(emojiData("shuffle"))
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(disabled),
     );
 }
 
@@ -116,7 +134,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     try {
         gif = await fetchGif();
     } catch (error) {
-        console.error("[anime]", error);
+        log.anime.error(error);
         await interaction.reply(
             reply(panel(withEmoji("error", t(locale, tag ? "anime.noResult" : "anime.empty"))), { ephemeral: true }),
         );
@@ -140,7 +158,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             gif = await fetchGif();
             await button.update(edit(view(locale, gif, header, false, buttonId)));
         } catch (error) {
-            console.error("[anime] reroll", error);
+            log.anime.error("reroll", error);
             await button.reply(reply(panel(withEmoji("error", t(locale, "anime.error"))), { ephemeral: true })).catch(() => undefined);
         }
     });

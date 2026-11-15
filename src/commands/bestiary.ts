@@ -1,10 +1,11 @@
-import { SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from "discord.js";
+import { ContainerBuilder, SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from "discord.js";
 import { suggest } from "../core/autocomplete";
 import { withEmoji } from "../core/emojis";
 import { fullDate, goldText, num, tierLabel } from "../core/format";
 import { loadPlayer, requirePlayer } from "../core/player";
 import { sendPaged } from "../core/paginate";
-import { panel, reply } from "../core/ui";
+import { imageGallery, panel, reply } from "../core/ui";
+import { BESTIARY_CARD_NAME, renderBestiaryCard } from "../canvas/bestiary-card";
 import { contentDescription, contentName } from "../i18n/content";
 import { describe, named, resolveLocale, t } from "../i18n";
 
@@ -45,20 +46,28 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         }
 
         const enemy = world.enemies.has(entry.type) ? world.enemies.get(entry.type) : undefined;
-        await interaction.reply(
-            reply(
-                panel(
-                    `## ${withEmoji("bestiary", contentName(locale, "enemy", entry.type, entry.name))}`,
-                    contentDescription(locale, "enemy", entry.type, entry.description),
-                    enemy ? `**${tierLabel(locale, enemy.tier)}** • ${t(locale, "bestiary.stats", { health: num(locale, enemy.health), strength: enemy.strength, defense: enemy.defense })}` : null,
-                    enemy
-                        ? t(locale, "bestiary.rewards", { xp: num(locale, enemy.experience), gold: goldText(locale, enemy.gold) })
-                        : null,
-                    `${t(locale, "bestiary.kills", { kills: num(locale, entry.kills) })} • ${t(locale, "bestiary.firstDefeat", { date: fullDate(entry.firstDefeatedAt) })}`,
-                ),
-                { ephemeral: true },
-            ),
-        );
+        const bestiary = player.bestiary.getProgress();
+        const name = contentName(locale, "enemy", entry.type, entry.name);
+        // Fiche dessinée en canvas (voir canvas/bestiary-card.ts) ; le texte alternatif reprend l'essentiel.
+        const card = await renderBestiaryCard({
+            type: entry.type,
+            name,
+            tier: enemy ? tierLabel(locale, enemy.tier) : "",
+            description: contentDescription(locale, "enemy", entry.type, entry.description) ?? "",
+            stats: enemy
+                ? [
+                      { label: t(locale, "bestiary.statHealth"), value: num(locale, enemy.health) },
+                      { label: t(locale, "bestiary.statStrength"), value: String(enemy.strength) },
+                      { label: t(locale, "bestiary.statDefense"), value: String(enemy.defense) },
+                  ]
+                : [],
+            rewards: enemy ? `${num(locale, enemy.experience)} XP • ${goldText(locale, enemy.gold)}` : "",
+            kills: t(locale, "bestiary.kills", { kills: num(locale, entry.kills) }),
+            firstDefeat: fullDate(entry.firstDefeatedAt),
+            progress: { ratio: bestiary.total > 0 ? bestiary.discovered / bestiary.total : 0, label: `${bestiary.discovered}/${bestiary.total}` },
+        });
+        const container = new ContainerBuilder().addMediaGalleryComponents(imageGallery(BESTIARY_CARD_NAME, name));
+        await interaction.reply(reply(container, { files: [card] }));
         return;
     }
 

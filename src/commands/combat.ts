@@ -1,9 +1,12 @@
+import { log } from "../core/logger";
 import {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
     SlashCommandBuilder,
     StringSelectMenuBuilder,
+    TextDisplayBuilder,
+    type AttachmentBuilder,
     type ChatInputCommandInteraction,
     type ContainerBuilder,
     type Message,
@@ -13,7 +16,8 @@ import { withEmoji } from "../core/emojis";
 import { captureEvents, eventsNamed } from "../core/events";
 import { goldText, itemDescription, itemName, num, tierLabel } from "../core/format";
 import { persist, requirePlayer, type Player } from "../core/player";
-import { bar, edit, panel, reply } from "../core/ui";
+import { bar, edit, imageGallery, panel, reply } from "../core/ui";
+import { COMBAT_CARD_NAME, renderCombatCard } from "../canvas/combat-card";
 import { contentName } from "../i18n/content";
 import { describe, formatIn, named, resolveLocale, t, type Locale } from "../i18n";
 
@@ -69,6 +73,11 @@ async function usableItems(client: Client, player: Player) {
     });
 }
 
+interface LiveView {
+    readonly container: ContainerBuilder;
+    readonly files: AttachmentBuilder[];
+}
+
 interface ViewOptions {
     readonly log?: readonly string[];
     /** Blocs affichés avant la fiche (ex. arrivée d'un voyage interrompu par une embuscade). */
@@ -83,13 +92,33 @@ async function liveView(
     player: Player,
     enemy: EnemyEntity,
     options: ViewOptions = {},
-): Promise<ContainerBuilder> {
+): Promise<LiveView> {
     const disabled = options.disabled ?? false;
+    // Les barres de vie sont dessinées sur une image (canvas) ; le texte ne garde que les infos utiles.
+    const card = await renderCombatCard(
+        { name: enemyName(locale, enemy), current: enemy.health, max: enemy.maxHealth, tag: tierLabel(locale, enemy.tier) },
+        { name: player.name, current: player.health.current, max: player.health.max, tag: `${t(locale, "common.levelShort")} ${player.level}` },
+    );
     const container = panel(
         ...(options.header ?? []),
-        enemySheet(locale, enemy),
-        playerLine(locale, player),
-        options.log && options.log.length > 0 ? `**${t(locale, "combat.round")}**\n${options.log.join("\n")}` : null,
+    );
+    container.addMediaGalleryComponents(
+        imageGallery(COMBAT_CARD_NAME, `${enemyName(locale, enemy)} ${Math.round(enemy.health)}/${Math.round(enemy.maxHealth)}`),
+    );
+    container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            [
+                t(locale, "combat.enemyStats", {
+                    health: num(locale, enemy.health),
+                    max: num(locale, enemy.maxHealth),
+                    strength: enemy.strength,
+                    defense: enemy.defense,
+                }),
+                options.log && options.log.length > 0 ? `**${t(locale, "combat.round")}**\n${options.log.join("\n")}` : null,
+            ]
+                .filter(Boolean)
+                .join("\n"),
+        ),
     );
 
     container.addActionRowComponents(
@@ -118,8 +147,13 @@ async function liveView(
             ),
         );
     }
-    return container;
+    return { container, files: [card] };
 }
+
+const liveEdit = async (client: Client, locale: Locale, player: Player, enemy: EnemyEntity, options: ViewOptions = {}) => {
+    const { container, files } = await liveView(client, locale, player, enemy, options);
+    return edit(container, files);
+};
 
 /** Écran de fin (victoire, défaite ou fuite) : plus aucun composant. */
 function endView(locale: Locale, ...blocks: Array<string | null>): ContainerBuilder {
@@ -189,7 +223,7 @@ export function attachCombatControls(message: Message, client: Client, player: P
                         }),
                     ),
                 ].filter((line): line is string => line !== null);
-                await pressed.update(edit(await liveView(client, locale, player, enemy, { log })));
+                await pressed.update(await liveEdit(client, locale, player, enemy, { log }));
                 return;
             }
 
@@ -259,9 +293,9 @@ export function attachCombatControls(message: Message, client: Client, player: P
                 return;
             }
 
-            await pressed.update(edit(await liveView(client, locale, player, result.enemy, { log })));
+            await pressed.update(await liveEdit(client, locale, player, result.enemy, { log }));
         } catch (error) {
-            console.error("[combat]", error);
+            log.combat.error(error);
             await pressed.reply(reply(panel(withEmoji("error", t(locale, "error.generic"))), { ephemeral: true })).catch(() => undefined);
         }
     });
@@ -270,20 +304,20 @@ export function attachCombatControls(message: Message, client: Client, player: P
         if (reason === "done") return;
         const enemy = world.combat.get(player.id)?.enemyEntity;
         if (!enemy) return;
-        const view = await liveView(client, locale, player, enemy, { disabled: true, log: [t(locale, "combat.timeout")] });
-        await message.edit(edit(view) as never).catch(() => undefined);
+        const payload = await liveEdit(client, locale, player, enemy, { disabled: true, log: [t(locale, "combat.timeout")] });
+        await message.edit(payload as never).catch(() => undefined);
     });
 }
 
 /** Vue de combat prête à l'emploi pour les autres commandes (voyage interrompu par une embuscade). */
-export async function ambushView(
+export async function ambushEdit(
     client: Client,
     locale: Locale,
     player: Player,
     enemy: EnemyEntity,
     header: readonly string[],
-): Promise<ContainerBuilder> {
-    return liveView(client, locale, player, enemy, { header });
+) {
+    return liveEdit(client, locale, player, enemy, { header });
 }
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -301,9 +335,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         t(locale, key, { enemy: enemyName(locale, enemy), tier: tierLabel(locale, enemy.tier) }),
     );
 
-    const message = await interaction.reply({
-        ...reply(await liveView(interaction.client, locale, player, enemy, { header: [header] })),
-        withResponse: true,
-    }).then((response) => response.resource!.message!);
+    const { container, files } = await liveView(interaction.client, locale, player, enemy, { header: [header] });
+    const message = await interaction
+        .reply({ ...reply(container, { files }), withResponse: true })
+        .then((response) => response.resource!.message!);
     attachCombatControls(message, interaction.client, player, locale);
 }

@@ -9,7 +9,7 @@ export const character = defineMessages({
         "character.created.title": "Bienvenue, {name}",
         "character.created.body":
             "Tu commences ton aventure en tant que **{class}** à **{location}**, avec **{gold}** et {items} en poche.",
-        "character.created.hint": "Utilise `/profil` pour consulter ta fiche et `/inventaire voir` pour ton sac.",
+        "character.created.hint": "Utilise {/profile} pour consulter ta fiche et {/inventory view} pour ton sac.",
         "character.delete.confirm":
             "Supprimer définitivement ton personnage ? Ton inventaire, ton coffre, ta progression et tes succès seront perdus.",
         "character.deleted": "Ton personnage a été supprimé.",
@@ -27,7 +27,7 @@ export const character = defineMessages({
         "character.created.title": "Welcome, {name}",
         "character.created.body":
             "You start your adventure as a **{class}** in **{location}**, with **{gold}** and {items} in your bag.",
-        "character.created.hint": "Use `/profile` to see your sheet and `/inventory view` for your bag.",
+        "character.created.hint": "Use {/profile} to see your sheet and {/inventory view} for your bag.",
         "character.delete.confirm":
             "Permanently delete your character? Your inventory, vault, progress and achievements will be lost.",
         "character.deleted": "Your character has been deleted.",

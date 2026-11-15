@@ -3,6 +3,7 @@ import { defineMessages } from "../define";
 export const profile = defineMessages({
     fr: {
         "profile.desc": "Affiche ta fiche d'aventurier ou celle d'un autre joueur.",
+        "profile.bankLocked": "verrouillée",
         "profile.status": "Statut",
         "profile.statusIdle": "disponible",
         "profile.statusCombat": "en combat",
@@ -42,6 +43,7 @@ export const profile = defineMessages({
     },
     "en-US": {
         "profile.desc": "Show your adventurer sheet or another player's.",
+        "profile.bankLocked": "locked",
         "profile.status": "Status",
         "profile.statusIdle": "available",
         "profile.statusCombat": "in combat",

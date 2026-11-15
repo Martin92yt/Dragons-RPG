@@ -1,3 +1,4 @@
+import { commandMention } from "../core/mentions";
 import type { LocaleString, LocalizationMap } from "discord.js";
 import type { Catalog } from "./define";
 import { core } from "./messages/core";
@@ -42,9 +43,10 @@ export function resolveLocale(discordLocale?: LocaleString | string | null): Loc
 /** Traduit une clé et remplace les variables `{nom}`. Une variable absente est laissée telle quelle. */
 export function t(locale: Locale, key: MessageKey, vars: Record<string, string | number> = {}): string {
     const template = CATALOGS[locale][key] ?? CATALOGS[DEFAULT_LOCALE][key] ?? key;
-    return template.replace(/\{(\w+)\}/g, (match, name: string) =>
-        name in vars ? String(vars[name]) : match,
-    );
+    return template
+        .replace(/\{(\w+)\}/g, (match, name: string) => (name in vars ? String(vars[name]) : match))
+        // `{/travel go}` -> mention cliquable `</travel go:ID>` (voir core/mentions.ts).
+        .replace(/\{\/([a-z-]+(?: [a-z-]+)?)\}/g, (_match, path: string) => commandMention(path));
 }
 
 /** Localisations Discord (nom/description de commande) à partir d'une clé. */

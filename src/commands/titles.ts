@@ -10,7 +10,6 @@ import { describe, named, resolveLocale, t } from "../i18n";
 
 export const data = describe(named(new SlashCommandBuilder(), "titles", "titres"), "titles.desc")
     .addSubcommand((sub) => describe(named(sub, "owned", "possédés"), "titles.owned.desc"))
-    .addSubcommand((sub) => describe(named(sub, "catalog", "catalogue"), "titles.catalog.desc"))
     .addSubcommand((sub) =>
         describe(named(sub, "equip", "équiper"), "titles.equip.desc").addStringOption((o) =>
             describe(named(o, "title", "titre"), "opt.title").setRequired(true).setAutocomplete(true),
@@ -60,28 +59,20 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         return;
     }
 
-    const catalog = sub === "catalog";
-    const all = world.titles.list();
-    const source = catalog ? all : player.titles.list();
-
-    const lines = source.map((title) => {
-        const owned = player.titles.has(title.id);
+    // Seuls les titres possédés sont listés : pas de catalogue complet (les titres à gagner restent une surprise).
+    const lines = player.titles.list().map((title) => {
         const name = contentName(locale, "title", title.id, title.name);
         const description = contentDescription(locale, "title", title.id, title.description);
-        const marks = [
-            rarityLabel(locale, title.rarity),
-            title.id === equippedId ? t(locale, "titles.equippedMark") : null,
-            catalog && !owned ? t(locale, "titles.locked") : null,
-        ].filter(Boolean);
-        const head = catalog && owned ? `${emoji("tick")} **${name}**` : `**${name}**`;
-        return `${head} • ${marks.join(" • ")}${description ? `\n  *${description}*` : ""}`;
+        const equipped = title.id === equippedId;
+        const head = `${emoji(equipped ? "tick" : "title")} **${name}**`;
+        return `${head}  •  ${rarityLabel(locale, title.rarity)}${description ? `\n-# ${description}` : ""}`;
     });
 
     await sendPaged(interaction, locale, {
-        title: withEmoji("title", t(locale, catalog ? "titles.catalogTitle" : "titles.ownedTitle")),
-        intro: t(locale, "titles.count", { owned: player.titles.list().length, total: all.length }),
+        title: withEmoji("title", t(locale, "titles.ownedTitle")),
+        intro: t(locale, "titles.count", { owned: player.titles.list().length, total: world.titles.list().length }),
         lines,
-        perPage: 6,
+        perPage: 8,
         emptyText: t(locale, "titles.none"),
         ephemeral: true,
     });
