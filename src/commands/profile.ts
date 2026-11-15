@@ -13,10 +13,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const player = await requireTargetPlayer(interaction, target.id);
     if (!player) return;
 
-    const { container, files } = await profileView(locale, interaction.client.RPG, player, target);
+    const container = await profileView(locale, interaction.client.RPG, player, target);
     await interaction.reply({
         components: [container],
-        files,
         flags: [MessageFlags.IsComponentsV2],
         allowedMentions: { parse: [] },
     });

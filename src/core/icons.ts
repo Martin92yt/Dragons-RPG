@@ -19,7 +19,7 @@ export const ICONS = {
     skillPoints: "skillPoints",
     strength: "broadsword",
     agility: "warriorbootslv1",
-    intelligence: "crystalball",
+    intelligence: "light",
     defense: "shield",
     title: "crown",
     marriage: "ring",

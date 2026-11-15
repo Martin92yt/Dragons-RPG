@@ -7,7 +7,6 @@ Tout ce qui s'affiche est séparé en quatre couches. Chacune se modifie sans to
 | un texte (FR et EN)                      | `src/i18n/messages/<domaine>.ts`     |
 | un emoji (une icône pour un rôle)        | `src/core/icons.ts`                  |
 | la structure d'un écran (lignes, ordre)  | `src/views/*.ts`                     |
-| une image générée (carte, barre de vie)  | `src/canvas/*.ts`                    |
 | la logique d'une commande                | `src/commands/*.ts`                  |
 
 ## Textes
@@ -31,15 +30,10 @@ Changer une icône = modifier une ligne de `icons.ts`. Un nom qui n'existe pas d
 `src/views/profile.ts` et `src/views/shop.ts` construisent leur écran ligne par ligne : déplacer, retirer ou
 ajouter une ligne se fait à un seul endroit. Les commandes ne gèrent que la logique (joueur, erreurs, boutons).
 
-## Images (canvas)
+## Images
 
-`src/canvas/` dessine en noir et blanc strict (palette dans `theme.ts`). Ressources facultatives dans `images/` :
-
-- `images/enemies/<type d'ennemi>.png` : illustration affichée sur la fiche de bestiaire (sinon, le glyphe de l'ennemi, voir `ENEMY_GLYPHS` dans `src/canvas/glyphs.ts`) ;
-- `images/<nom-d-emoji>.png` : les 815 glyphes blancs. `drawGlyph(ctx, clé, x, y, taille)` les dessine à partir d'un alias (`icons.ts`) ou d'une clé du registre ; le fichier est retrouvé par le nom de l'emoji (casse et tirets ignorés). Aucun téléversement Discord : zéro impact sur les limites d'API ;
-- `images/font.ttf` : police des cartes (sinon, la police système).
-
-Cartes : `bestiary-card.ts` (fiche d'ennemi), `combat-card.ts` (barres de vie + portraits), `profile-card.ts` (profil).
+Le bot ne génère aucune image (pas de canvas) : tout est du texte enrichi avec les emojis du registre.
+Le dossier `images/` sert de bibliothèque de référence des 815 emojis (mêmes noms que le registre).
 
 ## Logs
 

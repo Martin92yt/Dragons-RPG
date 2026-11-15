@@ -5,20 +5,16 @@ import {
     ButtonStyle,
     SlashCommandBuilder,
     StringSelectMenuBuilder,
-    TextDisplayBuilder,
-    type AttachmentBuilder,
     type ChatInputCommandInteraction,
     type ContainerBuilder,
     type Message,
 } from "discord.js";
 import type EnemyEntity from "dragons-of-legends.js/dist/enemy/enemy.js";
-import { withEmoji } from "../core/emojis";
+import { emoji, withEmoji } from "../core/emojis";
 import { captureEvents, eventsNamed } from "../core/events";
 import { goldText, itemDescription, itemName, num, tierLabel } from "../core/format";
 import { persist, requirePlayer, type Player } from "../core/player";
-import { bar, edit, imageGallery, panel, reply } from "../core/ui";
-import { COMBAT_CARD_NAME, renderCombatCard } from "../canvas/combat-card";
-import { enemyGlyph } from "../canvas/glyphs";
+import { edit, emojiBar, panel, reply } from "../core/ui";
 import { contentName } from "../i18n/content";
 import { describe, formatIn, named, resolveLocale, t, type Locale } from "../i18n";
 
@@ -39,24 +35,24 @@ export function enemyName(locale: Locale, enemy: Pick<EnemyEntity, "type" | "nam
     return contentName(locale, "enemy", enemy.type, enemy.name);
 }
 
-/** Fiche d'un ennemi : nom, palier, barre de vie et statistiques. */
+/** Fiche d'un ennemi : nom, palier, barre de vie et statistiques, chacune avec son icône. */
 export function enemySheet(locale: Locale, enemy: EnemyEntity): string {
     return [
-        `**${enemyName(locale, enemy)}** • ${tierLabel(locale, enemy.tier)}`,
-        `${bar(enemy.health, enemy.maxHealth, 12)} ${t(locale, "combat.enemyStats", {
-            health: num(locale, enemy.health),
-            max: num(locale, enemy.maxHealth),
-            strength: enemy.strength,
-            defense: enemy.defense,
-        })}`,
+        withEmoji("enemy", `**${enemyName(locale, enemy)}** • ${tierLabel(locale, enemy.tier)}`),
+        `${emojiBar(enemy.health, enemy.maxHealth, 10)} **${num(locale, enemy.health)}**/${num(locale, enemy.maxHealth)}`,
+        [
+            `${emoji("health")} ${num(locale, enemy.maxHealth)}`,
+            `${emoji("strength")} ${enemy.strength}`,
+            `${emoji("defense")} ${enemy.defense}`,
+        ].join("  •  "),
     ].join("\n");
 }
 
 function playerLine(locale: Locale, player: Player): string {
-    return withEmoji(
-        "health",
-        `**${t(locale, "combat.you")}** : ${bar(player.health.current, player.health.max, 12)} ${num(locale, player.health.current)}/${num(locale, player.health.max)}`,
-    );
+    return [
+        withEmoji("character", `**${t(locale, "combat.you")}** • ${t(locale, "common.levelShort")} ${player.level}`),
+        `${emojiBar(player.health.current, player.health.max, 10)} **${num(locale, player.health.current)}**/${num(locale, player.health.max)}`,
+    ].join("\n");
 }
 
 /** Consommables que le joueur peut utiliser en combat (soins et effets, pas les pochettes). */
@@ -74,11 +70,6 @@ async function usableItems(client: Client, player: Player) {
     });
 }
 
-interface LiveView {
-    readonly container: ContainerBuilder;
-    readonly files: AttachmentBuilder[];
-}
-
 interface ViewOptions {
     readonly log?: readonly string[];
     /** Blocs affichés avant la fiche (ex. arrivée d'un voyage interrompu par une embuscade). */
@@ -93,33 +84,13 @@ async function liveView(
     player: Player,
     enemy: EnemyEntity,
     options: ViewOptions = {},
-): Promise<LiveView> {
+): Promise<ContainerBuilder> {
     const disabled = options.disabled ?? false;
-    // Les barres de vie sont dessinées sur une image (canvas) ; le texte ne garde que les infos utiles.
-    const card = await renderCombatCard(
-        { name: enemyName(locale, enemy), current: enemy.health, max: enemy.maxHealth, tag: tierLabel(locale, enemy.tier), icon: enemyGlyph(enemy.type, enemy.tier) },
-        { name: player.name, current: player.health.current, max: player.health.max, tag: `${t(locale, "common.levelShort")} ${player.level}`, icon: "character" },
-    );
     const container = panel(
         ...(options.header ?? []),
-    );
-    container.addMediaGalleryComponents(
-        imageGallery(COMBAT_CARD_NAME, `${enemyName(locale, enemy)} ${Math.round(enemy.health)}/${Math.round(enemy.maxHealth)}`),
-    );
-    container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-            [
-                t(locale, "combat.enemyStats", {
-                    health: num(locale, enemy.health),
-                    max: num(locale, enemy.maxHealth),
-                    strength: enemy.strength,
-                    defense: enemy.defense,
-                }),
-                options.log && options.log.length > 0 ? `**${t(locale, "combat.round")}**\n${options.log.join("\n")}` : null,
-            ]
-                .filter(Boolean)
-                .join("\n"),
-        ),
+        enemySheet(locale, enemy),
+        playerLine(locale, player),
+        options.log && options.log.length > 0 ? `**${t(locale, "combat.round")}**\n${options.log.join("\n")}` : null,
     );
 
     container.addActionRowComponents(
@@ -148,12 +119,11 @@ async function liveView(
             ),
         );
     }
-    return { container, files: [card] };
+    return container;
 }
 
 const liveEdit = async (client: Client, locale: Locale, player: Player, enemy: EnemyEntity, options: ViewOptions = {}) => {
-    const { container, files } = await liveView(client, locale, player, enemy, options);
-    return edit(container, files);
+    return edit(await liveView(client, locale, player, enemy, options));
 };
 
 /** Écran de fin (victoire, défaite ou fuite) : plus aucun composant. */
@@ -336,9 +306,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         t(locale, key, { enemy: enemyName(locale, enemy), tier: tierLabel(locale, enemy.tier) }),
     );
 
-    const { container, files } = await liveView(interaction.client, locale, player, enemy, { header: [header] });
+    const container = await liveView(interaction.client, locale, player, enemy, { header: [header] });
     const message = await interaction
-        .reply({ ...reply(container, { files }), withResponse: true })
+        .reply({ ...reply(container), withResponse: true })
         .then((response) => response.resource!.message!);
     attachCombatControls(message, interaction.client, player, locale);
 }
