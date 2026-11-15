@@ -1,7 +1,7 @@
 import { ContainerBuilder, SlashCommandBuilder, type AutocompleteInteraction, type ChatInputCommandInteraction } from "discord.js";
 import { suggest } from "../core/autocomplete";
 import { withEmoji } from "../core/emojis";
-import { fullDate, goldText, num, tierLabel } from "../core/format";
+import { fullDate, num, tierLabel } from "../core/format";
 import { loadPlayer, requirePlayer } from "../core/player";
 import { sendPaged } from "../core/paginate";
 import { imageGallery, panel, reply } from "../core/ui";
@@ -53,15 +53,21 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             type: entry.type,
             name,
             tier: enemy ? tierLabel(locale, enemy.tier) : "",
+            tierId: enemy?.tier,
             description: contentDescription(locale, "enemy", entry.type, entry.description) ?? "",
             stats: enemy
                 ? [
-                      { label: t(locale, "bestiary.statHealth"), value: num(locale, enemy.health) },
-                      { label: t(locale, "bestiary.statStrength"), value: String(enemy.strength) },
-                      { label: t(locale, "bestiary.statDefense"), value: String(enemy.defense) },
+                      { label: t(locale, "bestiary.statHealth"), value: num(locale, enemy.health), icon: "health" as const },
+                      { label: t(locale, "bestiary.statStrength"), value: String(enemy.strength), icon: "strength" as const },
+                      { label: t(locale, "bestiary.statDefense"), value: String(enemy.defense), icon: "defense" as const },
                   ]
                 : [],
-            rewards: enemy ? `${num(locale, enemy.experience)} XP • ${goldText(locale, enemy.gold)}` : "",
+            rewards: enemy
+                ? [
+                      { value: `${num(locale, enemy.experience)} XP`, icon: "experience" as const },
+                      { value: num(locale, enemy.gold), icon: "gold" as const },
+                  ]
+                : [],
             kills: t(locale, "bestiary.kills", { kills: num(locale, entry.kills) }),
             firstDefeat: fullDate(entry.firstDefeatedAt),
             progress: { ratio: bestiary.total > 0 ? bestiary.discovered / bestiary.total : 0, label: `${bestiary.discovered}/${bestiary.total}` },

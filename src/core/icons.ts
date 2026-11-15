@@ -19,16 +19,16 @@ export const ICONS = {
     skillPoints: "skillPoints",
     strength: "broadsword",
     agility: "warriorbootslv1",
-    intelligence: "light",
+    intelligence: "crystalball",
     defense: "shield",
     title: "crown",
     marriage: "ring",
     // ── États ───────────────────────────────────────────────────────────────
-    dead: "skull",
+    dead: "gravestone",
     combat: "sword",
     travel: "compass",
     jobs: "toolkit",
-    cooldown: "time",
+    cooldown: "clock",
     // ── Systèmes ────────────────────────────────────────────────────────────
     inventory: "backpack",
     equipment: "warriorchestplatelv1",
@@ -44,17 +44,17 @@ export const ICONS = {
     fishing: "fishhook",
     admin: "settings",
     // ── Combat ──────────────────────────────────────────────────────────────
-    enemy: "demon",
+    enemy: "boss",
     attack: "sword",
     victory: "star",
     defeat: "skull",
-    flee: "door",
+    flee: "openthedoor",
     // ── Retours d'état ──────────────────────────────────────────────────────
     error: "exclamation",
     success: "tick",
     friends: "friends",
     shuffle: "refresh",
-    distance: "compass",
+    distance: "ruler",
     danger: "skull",
     buy: "creditcard",
     plus: "plus",
@@ -72,13 +72,13 @@ export const ICONS = {
 export type Icon = keyof typeof ICONS;
 
 /** Icône de chaque catégorie d'objet (boutique, inventaire). */
-export const CATEGORY_ICONS: Record<string, Icon> = {
-    weapons: "strength",
-    armor: "defense",
+export const CATEGORY_ICONS: Record<string, Icon | RegistryKey> = {
+    weapons: "broadsword",
+    armor: "warriorchestplatelv2",
     consumables: "effect",
-    materials: "inventory",
-    valuables: "gold",
-    amulet: "title",
+    materials: "stone",
+    valuables: "diamond",
+    amulet: "necklace",
     tool: "tool",
 };
 

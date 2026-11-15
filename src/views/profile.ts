@@ -1,8 +1,9 @@
-import { ContainerBuilder, SectionBuilder, TextDisplayBuilder, ThumbnailBuilder, escapeMarkdown, type User } from "discord.js";
+import { PROFILE_CARD_NAME, renderProfileCard } from "../canvas/profile-card";
+import { ContainerBuilder, SectionBuilder, TextDisplayBuilder, ThumbnailBuilder, escapeMarkdown, type AttachmentBuilder, type User } from "discord.js";
 import { emoji, jobIcon as jobIconOf } from "../core/emojis";
 import { locationName, num } from "../core/format";
 import { userIdOf, type Player } from "../core/player";
-import { clip } from "../core/ui";
+import { clip, imageGallery } from "../core/ui";
 import { contentName } from "../i18n/content";
 import { formatDuration, formatIn, t, type Locale } from "../i18n";
 
@@ -15,7 +16,12 @@ type World = Player["worldInstance"];
  * Fiche de profil : compacte, quatre à six lignes. C'est LE fichier à modifier pour changer la structure du
  * profil : chaque ligne est construite à part et peut être déplacée, retirée ou complétée sans toucher à la commande.
  */
-export async function profileView(locale: Locale, world: World, player: Player, owner: User): Promise<ContainerBuilder> {
+export async function profileView(
+    locale: Locale,
+    world: World,
+    player: Player,
+    owner: User,
+): Promise<{ container: ContainerBuilder; files: AttachmentBuilder[] }> {
     const title = player.titles.getEquipped();
     const attributes = player.attributes;
     const modifiers = await player.getModifiers();
@@ -36,26 +42,32 @@ export async function profileView(locale: Locale, world: World, player: Player, 
         title ? `  *${contentName(locale, "title", title.id, title.name)}*` : ""
     }`;
 
-    const vitals = [
-        `${emoji("level")} **${player.level}**`,
-        `**${num(locale, player.experience.current)}**/${num(locale, player.experience.required)} ${emoji("experience")}`,
-        `**${num(locale, player.health.current)}**/${num(locale, player.health.max)} ${emoji("health")}`,
-        `${emoji("gold")} **${num(locale, player.gold)}**`,
-        // La banque n'est pas une condition d'accès au profil : verrouillée, elle est simplement indiquée comme telle.
-        `${emoji("bank")} ${player.bankUnlocked ? `**${num(locale, player.bankGold)}**` : `*${t(locale, "profile.bankLocked")}*`}`,
-        `${emoji("location")} ${locationName(locale, player.location)}`,
-    ].join(SEP);
-
-    const points = attributes.points > 0 ? `${SEP}${emoji("skillPoints")} **${attributes.points}**` : "";
-    const stats =
-        `**${t(locale, "profile.attributes")} :** ` +
-        [
-            `${emoji("strength")} **${attributes.strength}**`,
-            `${emoji("agility")} **${attributes.agility}**`,
-            `${emoji("intelligence")} **${attributes.intelligence}**`,
-            `${emoji("defense")} **${attributes.defense}**`,
-        ].join(SEP) +
-        points;
+    const card = await renderProfileCard({
+        name: player.name,
+        subtitle: [title ? contentName(locale, "title", title.id, title.name) : null, playerClass ? contentName(locale, "class", playerClass.id, playerClass.name) : null]
+            .filter(Boolean)
+            .join("  •  "),
+        level: String(player.level),
+        experience: {
+            ratio: player.experience.required > 0 ? player.experience.current / player.experience.required : 0,
+            label: `${num(locale, player.experience.current)} / ${num(locale, player.experience.required)} XP`,
+        },
+        health: {
+            ratio: player.health.max > 0 ? player.health.current / player.health.max : 0,
+            label: `${num(locale, player.health.current)} / ${num(locale, player.health.max)}`,
+        },
+        attributes: (["strength", "agility", "intelligence", "defense"] as const).map((key) => ({
+            icon: key,
+            label: t(locale, `attribute.${key}`),
+            value: String(attributes[key]),
+        })),
+        holdings: [
+            { icon: "gold", value: num(locale, player.gold) },
+            { icon: "bank", value: player.bankUnlocked ? num(locale, player.bankGold) : t(locale, "profile.bankLocked") },
+            { icon: "location", value: locationName(locale, player.location) },
+            ...(attributes.points > 0 ? [{ icon: "skillPoints" as const, value: String(attributes.points) }] : []),
+        ],
+    });
 
     const identity = [
         playerClass ? contentName(locale, "class", playerClass.id, playerClass.name) : player.classId,
@@ -88,13 +100,14 @@ export async function profileView(locale: Locale, world: World, player: Player, 
             .map((e) => `${contentName(locale, "effect", e.effectId, e.name)} (${formatDuration(e.remainingMs)})`),
     ].filter(Boolean);
 
-    const text = [header, vitals, stats, identity, progression, jobs || null, bonuses.length > 0 ? bonuses.join(SEP) : null]
+    const text = [header, identity, progression, jobs || null, bonuses.length > 0 ? bonuses.join(SEP) : null]
         .filter((line): line is string => Boolean(line))
         .join("\n");
 
-    return new ContainerBuilder().addSectionComponents(
+    const container = new ContainerBuilder().addMediaGalleryComponents(imageGallery(PROFILE_CARD_NAME, player.name)).addSectionComponents(
         new SectionBuilder()
             .setThumbnailAccessory(new ThumbnailBuilder().setURL(owner.displayAvatarURL()))
             .addTextDisplayComponents(new TextDisplayBuilder().setContent(clip(text))),
     );
+    return { container, files: [card] };
 }

@@ -10,7 +10,8 @@ export type RegistryKey = keyof typeof REGISTRY;
  */
 export type EmojiKey = RegistryKey | Icon;
 
-function resolve(key: EmojiKey): RegistryKey {
+/** Clé du registre derrière un alias ou une clé directe (utilisé aussi par les cartes canvas). */
+export function resolve(key: EmojiKey): RegistryKey {
     return key in ICONS ? ICONS[key as Icon] : (key as RegistryKey);
 }
 

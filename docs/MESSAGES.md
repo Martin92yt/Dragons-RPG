@@ -35,8 +35,11 @@ ajouter une ligne se fait à un seul endroit. Les commandes ne gèrent que la lo
 
 `src/canvas/` dessine en noir et blanc strict (palette dans `theme.ts`). Ressources facultatives dans `images/` :
 
-- `images/enemies/<type d'ennemi>.png` : portrait affiché sur la fiche de bestiaire (sinon, une initiale) ;
+- `images/enemies/<type d'ennemi>.png` : illustration affichée sur la fiche de bestiaire (sinon, le glyphe de l'ennemi, voir `ENEMY_GLYPHS` dans `src/canvas/glyphs.ts`) ;
+- `images/<nom-d-emoji>.png` : les 815 glyphes blancs. `drawGlyph(ctx, clé, x, y, taille)` les dessine à partir d'un alias (`icons.ts`) ou d'une clé du registre ; le fichier est retrouvé par le nom de l'emoji (casse et tirets ignorés). Aucun téléversement Discord : zéro impact sur les limites d'API ;
 - `images/font.ttf` : police des cartes (sinon, la police système).
+
+Cartes : `bestiary-card.ts` (fiche d'ennemi), `combat-card.ts` (barres de vie + portraits), `profile-card.ts` (profil).
 
 ## Logs
 

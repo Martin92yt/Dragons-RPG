@@ -18,6 +18,7 @@ import { goldText, itemDescription, itemName, num, tierLabel } from "../core/for
 import { persist, requirePlayer, type Player } from "../core/player";
 import { bar, edit, imageGallery, panel, reply } from "../core/ui";
 import { COMBAT_CARD_NAME, renderCombatCard } from "../canvas/combat-card";
+import { enemyGlyph } from "../canvas/glyphs";
 import { contentName } from "../i18n/content";
 import { describe, formatIn, named, resolveLocale, t, type Locale } from "../i18n";
 
@@ -96,8 +97,8 @@ async function liveView(
     const disabled = options.disabled ?? false;
     // Les barres de vie sont dessinées sur une image (canvas) ; le texte ne garde que les infos utiles.
     const card = await renderCombatCard(
-        { name: enemyName(locale, enemy), current: enemy.health, max: enemy.maxHealth, tag: tierLabel(locale, enemy.tier) },
-        { name: player.name, current: player.health.current, max: player.health.max, tag: `${t(locale, "common.levelShort")} ${player.level}` },
+        { name: enemyName(locale, enemy), current: enemy.health, max: enemy.maxHealth, tag: tierLabel(locale, enemy.tier), icon: enemyGlyph(enemy.type, enemy.tier) },
+        { name: player.name, current: player.health.current, max: player.health.max, tag: `${t(locale, "common.levelShort")} ${player.level}`, icon: "character" },
     );
     const container = panel(
         ...(options.header ?? []),
